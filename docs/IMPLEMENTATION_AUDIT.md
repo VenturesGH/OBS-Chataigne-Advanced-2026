@@ -38,3 +38,10 @@ Tegen de draaiende OBS getest dat alle drie lijstrequests na Identified slagen, 
 De Source-dropdown blijft zichtbaar. Bij het wijzigen van Scene vult de module die met de directe items uit [GetSceneItemList](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#getsceneitemlist). De actuele programmascène volgt [CurrentProgramSceneChanged](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#currentprogramscenechanged). De optie All scenes gebruikt de eerder opgehaalde collectiebrede bronnen.
 
 De keuzelogica is via het modulescript tegen draaiende OBS getest. Voor elk van de zeven scènes kwamen de dropdownopties overeen met de directe scène-items die OBS retourneerde. Ook Current program scene en All scenes zijn gecontroleerd. Deze test heeft de zichtbaarheid in OBS niet gewijzigd.
+
+
+## Chataigne-interfacetest in 2026.11.8
+
+Chataigne 1.10.4 gaf voor een opgeslagen scèneselectie een lege tekst terug bij `substring(start)`. De module gebruikt nu expliciete eindposities en controleert lege tekst expliciet. De broncache gebruikt arrayrecords en de opties worden toegevoegd via Chataignes enumfuncties.
+
+In de open Chataigne-inspector getest met de bestaande actie. `PREVIEW_SIGLE` bood `Groep 2`, `Groep` en `logo` aan. Bij het wisselen naar `PREVIEW_2` veranderde de lijst in `T01_R`, `NRWCST` en `T02_R`. De eerdere scèneselectie is hersteld. De tijdelijke koppeling waarmee de bestaande actie tijdens het testen opnieuw aan het script werd verbonden, maakt geen deel uit van de patch.

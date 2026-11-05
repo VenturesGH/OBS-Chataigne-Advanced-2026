@@ -295,7 +295,7 @@ var sceneChoices = [];
 var inputChoices = [];
 var groupChoices = [];
 var programScene = "";
-var sceneSources = {};
+var sceneSources = [];
 var visibilityEditors = [];
 var visibilityEditorElapsed = 0;
 var sceneSourcesPrefix = "visibility-items:";
@@ -307,7 +307,7 @@ function moduleParameterChanged(parameter) {
         inputChoices = [];
         groupChoices = [];
         programScene = "";
-        sceneSources = {};
+        sceneSources = [];
     }
 }
 
@@ -322,7 +322,7 @@ function wsMessageReceived(message) {
         inputChoices = [];
         groupChoices = [];
         programScene = "";
-        sceneSources = {};
+        sceneSources = [];
         var newEventSub = 0; // Start with EventSubscription::None
 
         // Add event subscriptions based on parameters
@@ -367,8 +367,8 @@ function wsMessageReceived(message) {
     }
 
     if (obsObj.op == 7 && !d.requestStatus.result &&
-        d.requestType == "GetSceneItemList" && d.requestId.indexOf(sceneSourcesPrefix) == 0) {
-        sceneSources[d.requestId] = [];
+        d.requestType == "GetSceneItemList" && d.requestId.startsWith(sceneSourcesPrefix)) {
+        storeSceneSources(d.requestId, []);
     }
     if (obsObj.op == 7 && d.requestStatus.result) {
         if (d.requestId == "visibility-scenes") sceneChoices = d.responseData.scenes;
@@ -377,13 +377,13 @@ function wsMessageReceived(message) {
         if (d.requestType == "GetCurrentProgramScene") {
             programScene = d.responseData.sceneName || d.responseData.currentProgramSceneName;
         }
-        if (d.requestType == "GetSceneItemList" && d.requestId.indexOf(sceneSourcesPrefix) == 0) {
+        if (d.requestType == "GetSceneItemList" && d.requestId.startsWith(sceneSourcesPrefix)) {
             var names = [];
             var items = d.responseData.sceneItems;
             for (var index = 0; index < items.length; index++) {
                 if (names.indexOf(items[index].sourceName) == -1) names.push(items[index].sourceName);
             }
-            sceneSources[d.requestId] = names;
+            storeSceneSources(d.requestId, names);
         }
         followVisibilityRequest(d);
     }
@@ -395,7 +395,7 @@ function wsMessageReceived(message) {
         if (event == "SceneItemCreated" || event == "SceneItemRemoved" ||
             event == "InputNameChanged" || event == "SceneNameChanged" ||
             event == "CurrentSceneCollectionChanged") {
-            sceneSources = {};
+            sceneSources = [];
         }
         if (event == "CurrentSceneCollectionChanged") {
             sendObsCommand("GetCurrentProgramScene", undefined, "visibility-program");
@@ -500,7 +500,7 @@ function genericCommandExecutor(data, requestType, reqId, a, b, c, d, e, f, g, h
                 return;
             }
             value = value == "true";
-        } else if (type == "Object" || type == "Any" || type.indexOf("Array<") == 0) {
+        } else if (type == "Object" || type == "Any" || type.startsWith("Array<")) {
             value = JSON.parse(value);
         }
         requestData[name] = value;
@@ -571,6 +571,18 @@ function allVisibilitySources() {
     return sources;
 }
 
+function findSceneSources(requestId) {
+    for (var index = 0; index < sceneSources.length; index++) {
+        if (sceneSources[index].id == requestId) return sceneSources[index];
+    }
+    return null;
+}
+
+function storeSceneSources(requestId, names) {
+    var entry = findSceneSources(requestId);
+    if (entry != null) entry.names = names;
+}
+
 function update(deltaTime) {
     if (!identified || visibilityEditors.length == 0) return;
     visibilityEditorElapsed += deltaTime;
@@ -592,15 +604,17 @@ function update(deltaTime) {
             var name = "";
             if (scene == "current") name = programScene;
             else if (scene == "manual") name = editor.command.getChild("Scene Name").get();
-            else if (scene && scene.indexOf("scene:") == 0) name = scene.substring(6);
-            if (name) {
+            else if (scene != null && scene.startsWith("scene:")) name = scene.substring(6, scene.length);
+            if (name != null && name != "") {
                 var requestId = sceneSourcesPrefix + name;
-                if (sceneSources[requestId] === undefined) {
-                    sceneSources[requestId] = null;
+                var entry = findSceneSources(requestId);
+                if (entry == null) {
+                    entry = {"id": requestId, "names": null};
+                    sceneSources.push(entry);
                     sendObsCommand("GetSceneItemList", {"sceneName": name}, requestId);
                 }
-                if (sceneSources[requestId] == null) continue;
-                names = sceneSources[requestId];
+                if (entry.names == null) continue;
+                names = entry.names;
             }
         }
 
@@ -608,15 +622,15 @@ function update(deltaTime) {
         if (signature == editor.signature) continue;
         var sourceParameter = editor.command.getChild("Source");
         var previous = sourceParameter.get();
-        var options = {"Enter a source name": "manual"};
+        sourceParameter.removeOptions();
+        sourceParameter.addOption("Enter a source name", "manual");
         var selection = "manual";
         for (var sourceIndex = 0; sourceIndex < names.length; sourceIndex++) {
             var source = names[sourceIndex];
             var value = "source:" + source;
-            options["OBS: " + source] = value;
+            sourceParameter.addOption("OBS: " + source, value);
             if (previous == value) selection = value;
         }
-        sourceParameter.setOptions(options);
         sourceParameter.setData(selection);
         editor.signature = signature;
     }
@@ -631,10 +645,10 @@ function setSourceVisibility(scene, manualScene, allSources, choice, source, vis
     if (visibility === undefined) {
         visibility = source;
         source = choice;
-    } else if (choice && choice.indexOf("source:") == 0) {
-        source = choice.substring(7);
+    } else if (choice != null && choice.startsWith("source:")) {
+        source = choice.substring(7, choice.length);
     }
-    if (!identified || (!allSources && !source)) {
+    if (!identified || (!allSources && (source == null || source == ""))) {
         script.log("SetSourceVisibility requires a connected OBS and a source or All Sources");
         return;
     }
@@ -645,10 +659,10 @@ function setSourceVisibility(scene, manualScene, allSources, choice, source, vis
             undefined, visibilityPrefix + JSON.stringify(action));
         return;
     }
-    if (scene == "manual" && manualScene) {
+    if (scene == "manual" && manualScene != null && manualScene != "") {
         requestVisibilityItems(action, manualScene);
-    } else if (scene && scene.indexOf("scene:") == 0) {
-        requestVisibilityItems(action, scene.substring(6));
+    } else if (scene != null && scene.startsWith("scene:")) {
+        requestVisibilityItems(action, scene.substring(6, scene.length));
     } else {
         script.log("SetSourceVisibility: choose a scene or enter its name");
     }
@@ -661,8 +675,8 @@ function requestVisibilityItems(action, sceneName) {
 
 function followVisibilityRequest(reply) {
     var id = "" + reply.requestId;
-    if (id.indexOf(visibilityPrefix) != 0) return;
-    var action = JSON.parse(id.substring(visibilityPrefix.length));
+    if (!id.startsWith(visibilityPrefix)) return;
+    var action = JSON.parse(id.substring(visibilityPrefix.length, id.length));
     var data = reply.responseData;
     if (reply.requestType == "GetCurrentProgramScene") {
         requestVisibilityItems(action, data.sceneName || data.currentProgramSceneName);
