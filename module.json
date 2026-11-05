@@ -2,7 +2,7 @@
   "name": "OBS Chataigne Advanced 2026",
   "type": "WebSocket Client",
   "path": "Software",
-  "version": "2026.11.9",
+  "version": "2026.11.10",
   "description": "Controls OBS Studio via OBS WebSocket 5.x.",
   "url": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026",
   "downloadURL": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026/archive/refs/heads/main.zip",

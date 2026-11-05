@@ -52,3 +52,10 @@ In de open Chataigne-inspector getest met de bestaande actie. `PREVIEW_SIGLE` bo
 [OpenSourceProjector](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#opensourceprojector) heeft een dropdown met de via OBS opgehaalde inputs, scènes en groepen. De keuze wordt vertaald naar de bestaande `sourceName` en dezelfde serializer laat lege optionele velden weg. Het bestaande handmatige `sourceName`-veld blijft beschikbaar voor opgeslagen acties en voor invoer per naam of UUID.
 
 Een via de keuzelogica samengestelde projectorrequest tegen draaiende OBS gaf status 100. Handmatige naam en een request met alleen UUID zijn apart op de verzonden velden gecontroleerd.
+
+
+## Projectorkeuzes verversen in 2026.11.10
+
+De bronlijst van bestaande projectoracties volgt de opgehaalde OBS-lijsten. **Query All Values** vraagt de lijsten opnieuw op. Als de gekozen bron nog beschikbaar is, blijft die geselecteerd.
+
+Getest met een actie die vóór de OBS-responses was aangemaakt. Dezelfde actie ontving 21 bronopties en behield de selectie bij een tweede query. Ook in de Chataigne-inspector zijn de bronopties op een bestaande actie gecontroleerd, met een tijdelijke koppeling voor de al open sessie.

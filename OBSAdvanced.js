@@ -297,6 +297,8 @@ var groupChoices = [];
 var programScene = "";
 var sceneSources = [];
 var visibilityEditors = [];
+var projectorEditors = [];
+var projectorListsReady = {"scenes": false, "inputs": false, "groups": false};
 var visibilityEditorElapsed = 0;
 var sceneSourcesPrefix = "visibility-items:";
 
@@ -306,6 +308,7 @@ function moduleParameterChanged(parameter) {
         sceneChoices = [];
         inputChoices = [];
         groupChoices = [];
+        projectorListsReady = {"scenes": false, "inputs": false, "groups": false};
         programScene = "";
         sceneSources = [];
     }
@@ -321,6 +324,7 @@ function wsMessageReceived(message) {
         sceneChoices = [];
         inputChoices = [];
         groupChoices = [];
+        projectorListsReady = {"scenes": false, "inputs": false, "groups": false};
         programScene = "";
         sceneSources = [];
         var newEventSub = 0; // Start with EventSubscription::None
@@ -369,6 +373,11 @@ function wsMessageReceived(message) {
     if (obsObj.op == 7 && !d.requestStatus.result &&
         d.requestType == "GetSceneItemList" && d.requestId.startsWith(sceneSourcesPrefix)) {
         storeSceneSources(d.requestId, []);
+    }
+    if (obsObj.op == 7) {
+        if (d.requestId == "visibility-scenes") projectorListsReady.scenes = true;
+        if (d.requestId == "visibility-inputs") projectorListsReady.inputs = true;
+        if (d.requestId == "visibility-groups") projectorListsReady.groups = true;
     }
     if (obsObj.op == 7 && d.requestStatus.result) {
         if (d.requestId == "visibility-scenes") sceneChoices = d.responseData.scenes;
@@ -574,10 +583,40 @@ function allVisibilitySources() {
 function populateProjectorSources(command) {
     var selector = command.getChild("sourceName (OBS)");
     selector.setAttribute("saveValueOnly", false);
-    var sources = allVisibilitySources();
-    for (var index = 0; index < sources.length; index++) {
-        selector.addOption("OBS: " + sources[index], "source:" + sources[index]);
+    projectorEditors.push({"command": command, "signature": null});
+}
+
+function refreshProjectorEditors() {
+    if (!projectorListsReady.scenes || !projectorListsReady.inputs || !projectorListsReady.groups) return;
+
+    var names = allVisibilitySources();
+    var signature = JSON.stringify(names);
+    var activeEditors = [];
+    for (var index = 0; index < projectorEditors.length; index++) {
+        var editor = projectorEditors[index];
+        var selector = editor.command.getChild("sourceName (OBS)");
+        if (selector == null) continue;
+        activeEditors.push(editor);
+
+        if (signature == editor.signature) continue;
+        refreshSourceSelector(selector, names, "Enter a name or use UUID");
+        editor.signature = signature;
     }
+    projectorEditors = activeEditors;
+}
+
+function refreshSourceSelector(selector, names, manualLabel) {
+    var previous = selector.get();
+    selector.removeOptions();
+    selector.addOption(manualLabel, "manual");
+    var selection = "manual";
+    for (var index = 0; index < names.length; index++) {
+        var name = names[index];
+        var value = "source:" + name;
+        selector.addOption("OBS: " + name, value);
+        if (previous == value) selection = value;
+    }
+    selector.setData(selection);
 }
 
 function openSourceProjector(data, request, requestId, canvasUuid, choice,
@@ -606,10 +645,11 @@ function storeSceneSources(requestId, names) {
 }
 
 function update(deltaTime) {
-    if (!identified || visibilityEditors.length == 0) return;
+    if (!identified || (visibilityEditors.length == 0 && projectorEditors.length == 0)) return;
     visibilityEditorElapsed += deltaTime;
     if (visibilityEditorElapsed < 0.25) return;
     visibilityEditorElapsed = 0;
+    if (projectorEditors.length > 0) refreshProjectorEditors();
 
     var activeEditors = [];
     for (var index = 0; index < visibilityEditors.length; index++) {
@@ -642,18 +682,7 @@ function update(deltaTime) {
 
         var signature = JSON.stringify([scene, names]);
         if (signature == editor.signature) continue;
-        var sourceParameter = editor.command.getChild("Source");
-        var previous = sourceParameter.get();
-        sourceParameter.removeOptions();
-        sourceParameter.addOption("Enter a source name", "manual");
-        var selection = "manual";
-        for (var sourceIndex = 0; sourceIndex < names.length; sourceIndex++) {
-            var source = names[sourceIndex];
-            var value = "source:" + source;
-            sourceParameter.addOption("OBS: " + source, value);
-            if (previous == value) selection = value;
-        }
-        sourceParameter.setData(selection);
+        refreshSourceSelector(editor.command.getChild("Source"), names, "Enter a source name");
         editor.signature = signature;
     }
     visibilityEditors = activeEditors;
