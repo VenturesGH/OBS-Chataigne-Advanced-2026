@@ -76,6 +76,7 @@ var context = {
         enabled: new MockParameter(true),
         values: valuesRoot,
         parameters: {
+            serverPath: new MockParameter("127.0.0.1:4455"),
             eventSub: eventSubscriptions,
             enableAuthentication: new MockParameter(true),
             password: new MockParameter("secret")
@@ -96,14 +97,17 @@ vm.runInContext(moduleSource, context, {filename: "OBSAdvanced.js"});
 assert.ok(moduleSource.indexOf("function wsMessageReceived(message)") !== -1,
     "WebSocket clients must use Chataigne's one-argument callback");
 
-// OBS sends Hello only once, immediately after the socket opens. Reconnecting
-// on the first update tick guarantees the script-loading transaction is over.
+// OBS sends Hello only once, immediately after the socket opens. Cycling the
+// Server Path rebuilds the socket without unloading the script itself.
 context.init();
 assert.deepStrictEqual(context.local.enabled.setHistory, []);
 context.update(0.02);
-assert.deepStrictEqual(context.local.enabled.setHistory, [false, true]);
+assert.deepStrictEqual(context.local.parameters.serverPath.setHistory, [
+    "127.0.0.1:4455/__chataigne_reconnect__",
+    "127.0.0.1:4455"
+]);
 context.update(0.02);
-assert.deepStrictEqual(context.local.enabled.setHistory, [false, true]);
+assert.strictEqual(context.local.parameters.serverPath.setHistory.length, 2);
 
 // Every protocol request must be exposed as a generated Chataigne command.
 assert.strictEqual(context.API.requests.length, 147);

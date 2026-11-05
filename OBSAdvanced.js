@@ -370,10 +370,10 @@ var subscriptionParameterNames = [
 // ============================================================
 
 /**
- * Chataigne may establish the WebSocket connection a few milliseconds before
- * this script has finished loading. OBS sends Hello only once, immediately
- * after connecting. Reconnect after init so the callback is guaranteed to be
- * ready before that frame arrives. Respect a deliberately disabled module.
+ * Chataigne may establish the WebSocket connection before this script has
+ * finished loading. OBS sends Hello only once, immediately after connecting.
+ * Changing Server Path rebuilds only the WebSocket client; unlike toggling
+ * local.enabled, it leaves this script loaded and its callbacks registered.
  */
 function init() {
     isIdentified = false;
@@ -382,15 +382,17 @@ function init() {
 }
 
 /**
- * Declaring update gives Chataigne a 50 Hz callback. Waiting for its first tick
- * is essential: init itself still runs inside the script-loading transaction,
- * so reconnecting there can reproduce the same lost-Hello race.
+ * Wait until the script-loading transaction has completed before rebuilding
+ * the client. Otherwise OBS can send Hello while init() is still running.
  */
 function update(deltaTime) {
     if (!reconnectAfterInit) return;
     reconnectAfterInit = false;
-    local.enabled.set(false);
-    local.enabled.set(true);
+    var serverPath = local.parameters.serverPath.get();
+    var separator = serverPath.charAt(serverPath.length - 1) == "/" ? "" : "/";
+    local.parameters.serverPath.set(serverPath + separator + "__chataigne_reconnect__");
+    local.parameters.serverPath.set(serverPath);
+    script.log("OBS WebSocket client restarted after script load");
 }
 
 /**

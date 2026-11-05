@@ -2,7 +2,7 @@
 
 Een protocol-gegenereerde Chataigne-module voor OBS WebSocket 5.x. Deze editie is in 2026 met AI-assistentie herschreven, handmatig nagelopen en live gevalideerd tegen Chataigne 1.10.4 en OBS 33.0.0 / obs-websocket 5.7.6.
 
-Versie 2026.11.2 voorkomt bovendien een opstartrace waarbij Chataigne de socket al kon openen voordat het modulescript geladen was. De groene verbindingsindicator was dan zichtbaar, maar OBS' eenmalige Hello-frame werd gemist en er volgde geen Identify. De module plant de herverbinding in `init()` en voert haar uit op de eerste 50 Hz-`update()`-tick, dus pas nadat Chataigne de script-loading transaction volledig heeft afgesloten.
+Versie 2026.11.3 voorkomt bovendien een opstartrace waarbij Chataigne de socket al kon openen voordat het modulescript geladen was. De groene verbindingsindicator was dan zichtbaar, maar OBS' eenmalige Hello-frame werd gemist en er volgde geen Identify. Op de eerste update-tick nadat het script geladen is, bouwt de module uitsluitend de WebSocket-client opnieuw op via de bestaande `Server Path`. Het modulescript blijft daarbij actief; `local.enabled` wordt bewust niet meer geschakeld.
 
 De module is afgeleid van [KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced](https://github.com/KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced), dat zelf voortbouwt op [Edrig/OBS-Websocket-Chataigne-Module](https://github.com/Edrig/OBS-Websocket-Chataigne-Module). Dank aan beide auteurs en aan Benjamin Kuperberg voor [Chataigne](https://benjamin.kuperberg.fr/chataigne/en).
 
