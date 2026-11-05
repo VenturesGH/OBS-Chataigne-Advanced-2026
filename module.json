@@ -2,7 +2,7 @@
   "name": "OBS Chataigne Advanced 2026",
   "type": "WebSocket Client",
   "path": "Software",
-  "version": "2026.11.8",
+  "version": "2026.11.9",
   "description": "Controls OBS Studio via OBS WebSocket 5.x.",
   "url": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026",
   "downloadURL": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026/archive/refs/heads/main.zip",
@@ -4309,7 +4309,7 @@
     },
     "OpenSourceProjector": {
       "menu": "Ui",
-      "callback": "genericCommandExecutor",
+      "callback": "openSourceProjector",
       "parameters": {
         "data": {
           "type": "String",
@@ -4329,9 +4329,23 @@
           "type": "String",
           "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
+        "sourceName (OBS)": {
+          "type": "Enum",
+          "options": {
+            "Enter a name or use UUID": "manual"
+          },
+          "default": "Enter a name or use UUID",
+          "description": "Choose a source reported by OBS."
+        },
         "sourceName": {
           "type": "String",
-          "description": "Optional (blank uses OBS default). Name of the source to open a projector for"
+          "description": "Optional (blank uses OBS default). Name of the source to open a projector for",
+          "dependency": {
+            "source": "sourceName (OBS)",
+            "value": "manual",
+            "check": "equals",
+            "action": "show"
+          }
         },
         "sourceUuid": {
           "type": "String",
@@ -4345,7 +4359,8 @@
           "type": "String",
           "description": "Optional (blank uses OBS default). Size/Position data for a windowed projector, in Qt Base64 encoded format. Mutually exclusive with `monitorIndex`"
         }
-      }
+      },
+      "setupCallback": "populateProjectorSources"
     }
   }
 }

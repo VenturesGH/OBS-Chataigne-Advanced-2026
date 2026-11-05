@@ -571,6 +571,28 @@ function allVisibilitySources() {
     return sources;
 }
 
+function populateProjectorSources(command) {
+    var selector = command.getChild("sourceName (OBS)");
+    selector.setAttribute("saveValueOnly", false);
+    var sources = allVisibilitySources();
+    for (var index = 0; index < sources.length; index++) {
+        selector.addOption("OBS: " + sources[index], "source:" + sources[index]);
+    }
+}
+
+function openSourceProjector(data, request, requestId, canvasUuid, choice,
+    sourceName, sourceUuid, monitorIndex, projectorGeometry) {
+    genericCommandExecutor(data, request, requestId, canvasUuid,
+        selectedSourceName(choice, sourceName), sourceUuid, monitorIndex, projectorGeometry);
+}
+
+function selectedSourceName(choice, manualName) {
+    if (choice != null && choice.startsWith("source:")) {
+        return choice.substring(7, choice.length);
+    }
+    return manualName;
+}
+
 function findSceneSources(requestId) {
     for (var index = 0; index < sceneSources.length; index++) {
         if (sceneSources[index].id == requestId) return sceneSources[index];
@@ -645,8 +667,8 @@ function setSourceVisibility(scene, manualScene, allSources, choice, source, vis
     if (visibility === undefined) {
         visibility = source;
         source = choice;
-    } else if (choice != null && choice.startsWith("source:")) {
-        source = choice.substring(7, choice.length);
+    } else {
+        source = selectedSourceName(choice, source);
     }
     if (!identified || (!allSources && (source == null || source == ""))) {
         script.log("SetSourceVisibility requires a connected OBS and a source or All Sources");

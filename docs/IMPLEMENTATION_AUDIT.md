@@ -45,3 +45,10 @@ De keuzelogica is via het modulescript tegen draaiende OBS getest. Voor elk van 
 Chataigne 1.10.4 gaf voor een opgeslagen scèneselectie een lege tekst terug bij `substring(start)`. De module gebruikt nu expliciete eindposities en controleert lege tekst expliciet. De broncache gebruikt arrayrecords en de opties worden toegevoegd via Chataignes enumfuncties.
 
 In de open Chataigne-inspector getest met de bestaande actie. `PREVIEW_SIGLE` bood `Groep 2`, `Groep` en `logo` aan. Bij het wisselen naar `PREVIEW_2` veranderde de lijst in `T01_R`, `NRWCST` en `T02_R`. De eerdere scèneselectie is hersteld. De tijdelijke koppeling waarmee de bestaande actie tijdens het testen opnieuw aan het script werd verbonden, maakt geen deel uit van de patch.
+
+
+## Projectorbron kiezen in 2026.11.9
+
+[OpenSourceProjector](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#opensourceprojector) heeft een dropdown met de via OBS opgehaalde inputs, scènes en groepen. De keuze wordt vertaald naar de bestaande `sourceName` en dezelfde serializer laat lege optionele velden weg. Het bestaande handmatige `sourceName`-veld blijft beschikbaar voor opgeslagen acties en voor invoer per naam of UUID.
+
+Een via de keuzelogica samengestelde projectorrequest tegen draaiende OBS gaf status 100. Handmatige naam en een request met alleen UUID zijn apart op de verzonden velden gecontroleerd.

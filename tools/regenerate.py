@@ -152,6 +152,29 @@ for request in protocol_data["requests"]:
             "parameters": params,
         }
 
+# Keep sourceName as the saved manual field for existing actions. Add the
+# selector before it so Chataigne can evaluate the manual field's dependency.
+projector = module_data["commands"]["OpenSourceProjector"]
+projector["callback"] = "openSourceProjector"
+projector["setupCallback"] = "populateProjectorSources"
+projector_params = {}
+for name, definition in projector["parameters"].items():
+    if name == "sourceName":
+        projector_params["sourceName (OBS)"] = {
+            "type": "Enum",
+            "options": {"Enter a name or use UUID": "manual"},
+            "default": "Enter a name or use UUID",
+            "description": "Choose a source reported by OBS.",
+        }
+        definition["dependency"] = {
+            "source": "sourceName (OBS)",
+            "value": "manual",
+            "check": "equals",
+            "action": "show",
+        }
+    projector_params[name] = definition
+projector["parameters"] = projector_params
+
 # === Save the updated module.json
 with open(module_json_path, "w") as module_file:
     json.dump(module_data, module_file, indent=2)
