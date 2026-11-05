@@ -294,6 +294,11 @@ var identified = false;
 var sceneChoices = [];
 var inputChoices = [];
 var groupChoices = [];
+var programScene = "";
+var sceneSources = {};
+var visibilityEditors = [];
+var visibilityEditorElapsed = 0;
+var sceneSourcesPrefix = "visibility-items:";
 
 function moduleParameterChanged(parameter) {
     if (parameter.name == "connected" && !parameter.get()) {
@@ -301,6 +306,8 @@ function moduleParameterChanged(parameter) {
         sceneChoices = [];
         inputChoices = [];
         groupChoices = [];
+        programScene = "";
+        sceneSources = {};
     }
 }
 
@@ -314,6 +321,8 @@ function wsMessageReceived(message) {
         sceneChoices = [];
         inputChoices = [];
         groupChoices = [];
+        programScene = "";
+        sceneSources = {};
         var newEventSub = 0; // Start with EventSubscription::None
 
         // Add event subscriptions based on parameters
@@ -357,15 +366,39 @@ function wsMessageReceived(message) {
         return;
     }
 
+    if (obsObj.op == 7 && !d.requestStatus.result &&
+        d.requestType == "GetSceneItemList" && d.requestId.indexOf(sceneSourcesPrefix) == 0) {
+        sceneSources[d.requestId] = [];
+    }
     if (obsObj.op == 7 && d.requestStatus.result) {
         if (d.requestId == "visibility-scenes") sceneChoices = d.responseData.scenes;
         if (d.requestId == "visibility-inputs") inputChoices = d.responseData.inputs;
         if (d.requestId == "visibility-groups") groupChoices = d.responseData.groups;
+        if (d.requestType == "GetCurrentProgramScene") {
+            programScene = d.responseData.sceneName || d.responseData.currentProgramSceneName;
+        }
+        if (d.requestType == "GetSceneItemList" && d.requestId.indexOf(sceneSourcesPrefix) == 0) {
+            var names = [];
+            var items = d.responseData.sceneItems;
+            for (var index = 0; index < items.length; index++) {
+                if (names.indexOf(items[index].sourceName) == -1) names.push(items[index].sourceName);
+            }
+            sceneSources[d.requestId] = names;
+        }
         followVisibilityRequest(d);
     }
     if (obsObj.op == 5 && identified) {
         var event = d.eventType;
+        if (event == "CurrentProgramSceneChanged") {
+            programScene = d.eventData.sceneName;
+        }
+        if (event == "SceneItemCreated" || event == "SceneItemRemoved" ||
+            event == "InputNameChanged" || event == "SceneNameChanged" ||
+            event == "CurrentSceneCollectionChanged") {
+            sceneSources = {};
+        }
         if (event == "CurrentSceneCollectionChanged") {
+            sendObsCommand("GetCurrentProgramScene", undefined, "visibility-program");
             refreshVisibilityChoices();
         } else if (event == "SceneCreated" || event == "SceneRemoved" || event == "SceneNameChanged") {
             sendObsCommand("GetSceneList", undefined, "visibility-scenes");
@@ -515,11 +548,17 @@ function populateSceneChoices(command) {
     var sourceParameter = command.getChild("Source");
     sceneParameter.setAttribute("saveValueOnly", false);
     sourceParameter.setAttribute("saveValueOnly", false);
-    var sources = [];
     for (var index = 0; index < sceneChoices.length; index++) {
         var name = sceneChoices[index].sceneName;
         sceneParameter.addOption("OBS: " + name, "scene:" + name);
-        sources.push(name);
+    }
+    visibilityEditors.push({"command": command, "signature": null});
+}
+
+function allVisibilitySources() {
+    var sources = [];
+    for (var index = 0; index < sceneChoices.length; index++) {
+        sources.push(sceneChoices[index].sceneName);
     }
     for (var index = 0; index < inputChoices.length; index++) {
         var name = inputChoices[index].inputName;
@@ -529,9 +568,59 @@ function populateSceneChoices(command) {
         var name = groupChoices[index];
         if (sources.indexOf(name) == -1) sources.push(name);
     }
-    for (var index = 0; index < sources.length; index++) {
-        sourceParameter.addOption("OBS: " + sources[index], "source:" + sources[index]);
+    return sources;
+}
+
+function update(deltaTime) {
+    if (!identified || visibilityEditors.length == 0) return;
+    visibilityEditorElapsed += deltaTime;
+    if (visibilityEditorElapsed < 0.25) return;
+    visibilityEditorElapsed = 0;
+
+    var activeEditors = [];
+    for (var index = 0; index < visibilityEditors.length; index++) {
+        var editor = visibilityEditors[index];
+        var sceneParameter = editor.command.getChild("Scene");
+        if (sceneParameter == null) continue; // Chataigne clears deleted command references.
+        activeEditors.push(editor);
+
+        var scene = sceneParameter.get();
+        var names = [];
+        if (scene == "all") {
+            names = allVisibilitySources();
+        } else {
+            var name = "";
+            if (scene == "current") name = programScene;
+            else if (scene == "manual") name = editor.command.getChild("Scene Name").get();
+            else if (scene && scene.indexOf("scene:") == 0) name = scene.substring(6);
+            if (name) {
+                var requestId = sceneSourcesPrefix + name;
+                if (sceneSources[requestId] === undefined) {
+                    sceneSources[requestId] = null;
+                    sendObsCommand("GetSceneItemList", {"sceneName": name}, requestId);
+                }
+                if (sceneSources[requestId] == null) continue;
+                names = sceneSources[requestId];
+            }
+        }
+
+        var signature = JSON.stringify([scene, names]);
+        if (signature == editor.signature) continue;
+        var sourceParameter = editor.command.getChild("Source");
+        var previous = sourceParameter.get();
+        var options = {"Enter a source name": "manual"};
+        var selection = "manual";
+        for (var sourceIndex = 0; sourceIndex < names.length; sourceIndex++) {
+            var source = names[sourceIndex];
+            var value = "source:" + source;
+            options["OBS: " + source] = value;
+            if (previous == value) selection = value;
+        }
+        sourceParameter.setOptions(options);
+        sourceParameter.setData(selection);
+        editor.signature = signature;
     }
+    visibilityEditors = activeEditors;
 }
 
 var visibilityPrefix = "source-visibility/";

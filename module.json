@@ -2,7 +2,7 @@
   "name": "OBS Chataigne Advanced 2026",
   "type": "WebSocket Client",
   "path": "Software",
-  "version": "2026.11.6",
+  "version": "2026.11.7",
   "description": "Controls OBS Studio via OBS WebSocket 5.x.",
   "url": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026",
   "downloadURL": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026/archive/refs/heads/main.zip",
@@ -156,13 +156,7 @@
             "Enter a source name": "manual"
           },
           "default": "Enter a source name",
-          "description": "Sources reported by OBS. The selected scene must contain the source.",
-          "dependency": {
-            "source": "All Sources",
-            "value": false,
-            "check": "equals",
-            "action": "show"
-          }
+          "description": "Direct sources in the selected scene. All scenes lists sources from the scene collection."
         },
         "Source Name": {
           "type": "String",

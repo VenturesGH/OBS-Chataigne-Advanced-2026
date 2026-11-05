@@ -31,3 +31,10 @@ De patch begint bij upstream `d30e873`. De generator gebruikt [protocol.json op 
 | [GetSceneList](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#getscenelist), [GetInputList](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#getinputlist) en [GetGroupList](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#getgrouplist) | Vraag bij Identified de ongefilterde lijsten op. Vul bij het aanmaken van SetSourceVisibility de dropdowns Scene en Source. | GetSceneList en GetInputList hebben optionele filters. De oude opstartlus sloeg ze daarom over. Voor bronnen was er alleen een tekstveld. |
 
 Tegen de draaiende OBS getest dat alle drie lijstrequests na Identified slagen, dat de callbacks scène- en bronopties opbouwen en dat de waarden van die opties Hide, Show en Toggle correct uitvoeren. De zichtbaarheid is na de test hersteld. De keuzelijsten zijn via het modulescript getest.
+
+
+## Bronnen per scène in 2026.11.7
+
+De Source-dropdown blijft zichtbaar. Bij het wijzigen van Scene vult de module die met de directe items uit [GetSceneItemList](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#getsceneitemlist). De actuele programmascène volgt [CurrentProgramSceneChanged](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#currentprogramscenechanged). De optie All scenes gebruikt de eerder opgehaalde collectiebrede bronnen.
+
+De keuzelogica is via het modulescript tegen draaiende OBS getest. Voor elk van de zeven scènes kwamen de dropdownopties overeen met de directe scène-items die OBS retourneerde. Ook Current program scene en All scenes zijn gecontroleerd. Deze test heeft de zichtbaarheid in OBS niet gewijzigd.
