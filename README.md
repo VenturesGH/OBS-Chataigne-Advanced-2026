@@ -1,87 +1,64 @@
-# OBS Websocket Advanced module for Chataigne
-An advanced module to use OBS Websocket V5 within the [Chataigne](http://benjamin.kuperberg.fr/chataigne/en) Software.
+# OBS Chataigne Advanced 2026
 
-This module is in alpha state, brand new and bugs might exist.
-Feel free to open issues or PRs about those!
+Een protocol-gegenereerde Chataigne-module voor OBS WebSocket 5.x. Deze editie is in 2026 met AI-assistentie herschreven, handmatig nagelopen en live gevalideerd tegen Chataigne 1.10.4 en OBS 33.0.0 / obs-websocket 5.7.6.
 
-This module tries to use the least ammount of "manual work", and build on the official websocket protocol definition as much as possible.
+De module is afgeleid van [KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced](https://github.com/KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced), dat zelf voortbouwt op [Edrig/OBS-Websocket-Chataigne-Module](https://github.com/Edrig/OBS-Websocket-Chataigne-Module). Dank aan beide auteurs en aan Benjamin Kuperberg voor [Chataigne](https://benjamin.kuperberg.fr/chataigne/en).
 
-By generating code, and using logic that parses the official protocol, I hope it will be easier to maintain.
+> AI-vermelding: de herimplementatie, protocol-audit, tests en documentatie van deze 2026-editie zijn door OpenAI Codex uitgevoerd onder regie van de gebruiker. De originele auteurs blijven hierboven expliciet vermeld; deze editie claimt hun eerdere werk niet als nieuw werk.
 
-<h1>Table Of contents</h1>
+## Belangrijkste correcties
 
-<!-- TOC -->
-* [OBS Websocket Advanced module for Chataigne](#obs-websocket-advanced-module-for-chataigne)
-* [Prerequisites](#prerequisites)
-* [How to use](#how-to-use)
-  * [Values](#values)
-  * [Requests](#requests)
-    * [Pre-mapped request templates](#pre-mapped-request-templates)
-    * [Raw OBS Message](#raw-obs-message)
-    * [Raw websocket message](#raw-websocket-message)
-  * [Contributing](#contributing)
-  * [Acknowledgments](#acknowledgments)
-<!-- TOC -->
+- Optionele velden worden werkelijk weggelaten. Een leeg `sourceUuid` of `projectorGeometry` komt dus niet meer in een `OpenSourceProjector`-request terecht.
+- Optionele numerieke velden zijn in Chataigne tekstvelden: leeg betekent “niet meesturen”, `0` en `-1` blijven geldige expliciete waarden.
+- Conditioneel vereiste naam/UUID-paren worden vóór verzending gecontroleerd.
+- Onderling exclusieve velden, waaronder `monitorIndex`/`projectorGeometry` en `inputVolumeMul`/`inputVolumeDb`, worden correct behandeld.
+- `requestId` wordt altijd als string verstuurd, conform het protocol.
+- `GetMonitorList` en alle andere `Array<Object>`-responses gebruiken nu de juiste `requests.*`-mapping; iedere row bewaart bovendien de volledige `rawJson`, zodat onbekende toekomstige velden zichtbaar blijven.
+- `Object`-responsevelden worden als JSON bewaard in plaats van genegeerd.
+- Mislukte requests zonder `responseData` worden zichtbaar gemaakt zonder scriptfout.
+- Alle huidige 147 requests en 60 events uit de officiële protocoldefinitie zijn ingebed. OBS WebSocket 5.7 canvas- en deinterlace-integraties zijn toegevoegd.
+- Alle JSON-opcodes 0, 1, 2, 3, 5, 6, 7, 8 en 9 worden ondersteund, inclusief Reidentify en request batches.
 
-# Prerequisites
- * [Chataigne](https://benjamin.kuperberg.fr/chataigne/en) Version: 1.9.24+
- * [OBS](https://obsproject.com) Version: 28+
+Zie [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) voor de volledige wijzigingentabel en motivatie. De vooraf uitgevoerde forkaudit staat in [docs/FORK_AUDIT.md](docs/FORK_AUDIT.md). De oorspronkelijke gebruikersprompt staat ongewijzigd in [docs/USER_PROMPT.md](docs/USER_PROMPT.md).
 
+## Installatie
 
-# How to use
- * Enable the Websocket server in OBS (Tools -> Websocket Server Settings) 
- * Add this module to Chataigne, and set up the Websocket connection
+1. Kopieer deze map als gewone lokale map naar `<Documents>/Chataigne/modules/OBS-Chataigne-Advanced-2026`.
+2. Kies in Chataigne `File > Reload Custom Modules`.
+3. Verwijder een oude module-instance en voeg `Software > OBS Chataigne Advanced 2026` opnieuw toe. Chataigne past wijzigingen in `module.json` niet retroactief toe op bestaande instances.
+4. Stel `Server Path` in, standaard `127.0.0.1:4455`, en vul zo nodig het OBS WebSocket-wachtwoord in.
 
-## Values
-This module automatically parses all the events and responses that are coming from OBS, and
-puts them under three categories:
+Gebruik voor een Nextcloud-werkmap geen symlink in Chataignes modulemap; kopieer de map lokaal. De Chataigne-modulelader kan bij het volgen van zo'n cloudsymlink blokkeren.
 
- * Values / **Requests**: This is where the responses are put for any request that is being sent
- * Values / **Events**: This is where the event data is put for any event that is coming in
- * Values / **Merged**: These can be coming from both of the above sources and this is where they are mapped together.
+## Gebruik
 
-![](docs/values.png)
+Responses staan onder `Values > Responses`, events onder `Values > Events` en samengevoegde veelgebruikte waarden onder `Values > Merged`.
 
-For example, the `merged.programScene.sceneName` might come from any of these messages: GetSceneList (req), CurrentProgramSceneChanged (event), GetCurrentProgramScene (req) 
-but in any of these inputs it will be also mapped to the mentioned key.
+`GetMonitorList` publiceert naast de volledige monitorobjecten:
 
-## Requests
+- `monitorCount`;
+- een links-naar-rechts gesorteerde reeks OBS-monitorindexen onder `Merged > Monitoren`;
+- bij exact drie monitoren de extra aliassen `Links`, `Midden` en `Rechts`.
 
-### Pre-mapped request templates
-You may send requests that are pre-mapped for you based on the OBS websocket API.
+Voor optionele numerieke commandovelden geldt: laat het veld leeg om het niet te verzenden. Vul bijvoorbeeld `-1` in bij `monitorIndex` om een projector in een venster te openen. Objectvelden verwachten JSON, bijvoorbeeld `{}`.
 
-![templates.png](docs/templates.png)
+## Testen en regenereren
 
-For example:
+```sh
+npm test
+python3 tools/regenerate.py
+```
 
-![template.png](docs/template.png)
+De generator haalt `docs/generated/protocol.json` van de officiële [obs-websocket-repository](https://github.com/obsproject/obs-websocket) op, werkt de ingebedde API en de commandodefinities bij en bewaart optionaliteitsmetadata voor bestaande Chataigne-actions.
 
+De live validatie op 5 november 2026 gaf OBS-statuscode `100` voor `GetMonitorList`, `GetCanvasList` en een door deze module geserialiseerde `OpenSourceProjector` met uitsluitend `sourceName` en `monitorIndex`.
 
-### Raw OBS Message
-You may send a raw OBS message, if you are sure of what you are doing with the Templates/+/Raw OBS Message.
-For more info on that, check out the official protocol [OBS Websocket Protocol Definition](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#requests).
+## Compatibiliteit
 
-![rawobs.png](docs/rawobs.png)
+- Chataigne: getest met 1.10.4.
+- OBS: getest met 33.0.0 en obs-websocket 5.7.6.
+- Oudere OBS 28+ versies ondersteunen de basis van WebSocket 5.x, maar commands die later zijn toegevoegd kunnen daar terecht met `UnknownRequestType` worden afgewezen.
 
+## Licentie en herkomst
 
-### Raw websocket message
-Or you may send a raw websocket message, if you are sure of what you are doing with the Templates/+/Raw WS Message.
-
-![rawws.png](docs/rawws.png)
-
-## Contributing
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## Acknowledgments
-This module is almost rebuilt from the scratch, but it is originally forked from the awesome work of [Edrig](https://github.com/Edrig/OBS-Websocket-Chataigne-Module)!
-
-Thanks to [Benjamin Kuperberg ](https://benjamin.kuperberg.fr/) for his amazing work of art, [Chataigne](http://benjamin.kuperberg.fr/chataigne/en).
+Deze repository behoudt de herkomstgeschiedenis van de Advanced-module. Controleer bij distributie ook de licentievoorwaarden van Chataigne en obs-websocket; de protocoldefinitie wordt als gegenereerde interoperabiliteitsmetadata gebruikt.

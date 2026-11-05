@@ -31,11 +31,34 @@ end_marker = "// </GENERATED-CODE-API>"
 
 # Properly encode JSON to ensure valid JavaScript
 api_data = json.dumps(protocol_data, indent=2)
-api_data_js_safe = api_data.replace("\\", "\\\\")
-new_generated_code = f"{start_marker}\nvar API = {api_data_js_safe};\n{end_marker}"
+new_generated_code = f"{start_marker}\nvar API = {api_data};\n{end_marker}"
 obsng_content = re.sub(
     f"{start_marker}.*?{end_marker}",
-    new_generated_code,
+    lambda _: new_generated_code,
+    obsng_content,
+    flags=re.DOTALL
+)
+
+# Keep a compact optional-field lookup for commands created with an older
+# module.json. Newly created commands carry this metadata in their hidden data
+# parameter, but Chataigne persists old action definitions in .noisette files.
+optional_fields = {
+    request["requestType"]: [
+        field["valueName"] for field in request["requestFields"]
+        if field["valueOptional"]
+    ]
+    for request in protocol_data["requests"]
+    if any(field["valueOptional"] for field in request["requestFields"])
+}
+optional_start = "// <GENERATED-CODE-OPTIONAL-FIELDS>"
+optional_end = "// </GENERATED-CODE-OPTIONAL-FIELDS>"
+optional_code = (
+    f"{optional_start}\nvar optionalRequestFields = "
+    f"{json.dumps(optional_fields, indent=4)};\n{optional_end}"
+)
+obsng_content = re.sub(
+    f"{optional_start}.*?{optional_end}",
+    lambda _: optional_code,
     obsng_content,
     flags=re.DOTALL
 )
@@ -58,9 +81,14 @@ def is_an_int_field(field_name):
     )
 
 # Maps protocol types to Chataigne types.
-def determine_type(paramName, paramType):
+def determine_type(paramName, paramType, optional=False):
     if paramType == "Boolean":
         return "Boolean"
+    elif paramType == "Number" and optional:
+        # An empty String is the only reliable "not provided" representation
+        # for an optional number in a Chataigne command. 0 is often a valid
+        # value and therefore cannot be used as a sentinel.
+        return "String"
     elif paramType == "Number":
         return is_an_int_field(paramName) and "Integer" or "Float"
     elif paramType == "String":
@@ -98,7 +126,7 @@ module_data["commands"] = {
                 "default": "GetStats"
             },
             "requestId": {
-                "type": "Integer",
+                "type": "String",
                 "default": "0"
             },
             "requestData": {
@@ -107,6 +135,31 @@ module_data["commands"] = {
             }
         }
     },
+    "Request Batch": {
+        "menu": "",
+        "callback": "sendRequestBatch",
+        "parameters": {
+            "requestId": {
+                "type": "String",
+                "default": "batch-0",
+                "description": "String used to correlate the batch response"
+            },
+            "haltOnFailure": {
+                "type": "Boolean",
+                "default": False
+            },
+            "executionType": {
+                "type": "Integer",
+                "default": 0,
+                "description": "0 SerialRealtime, 1 SerialFrame, 2 Parallel"
+            },
+            "requests": {
+                "type": "String",
+                "default": json.dumps([{"requestType": "GetVersion"}]),
+                "description": "JSON array of OBS request objects"
+            }
+        }
+    }
 
 }
 
@@ -120,7 +173,7 @@ for request in protocol_data["requests"]:
         params = {
             "data":{"type":"String","enabled":False},
             "request":{"type":"String","default":request_type,"enabled":False},
-            "requestId":{"type":"Integer","default":"0"},
+            "requestId":{"type":"String","default":"0"},
         }
         fieldList = []
 
@@ -129,14 +182,40 @@ for request in protocol_data["requests"]:
                 # This is because of the weird way the keyboard object is expressed in the official protocol.
                 continue
 
-            typeName = determine_type(field["valueName"],field["valueType"])
+            typeName = determine_type(
+                field["valueName"], field["valueType"], field["valueOptional"]
+            )
             if typeName == "":
                 continue
-            fieldList.append([field['valueName'],field['valueType']])
+            field_metadata = {"optional": field['valueOptional']}
+
+            # Optional booleans use the protocol's default. Omitting that
+            # value is semantically identical, while toggling it still lets a
+            # user send the non-default value explicitly.
+            if field['valueOptional'] and field['valueType'] == "Boolean":
+                behavior = (field.get('valueOptionalBehavior') or '').strip('`').lower()
+                boolean_default = behavior == "true"
+                field_metadata["omitIfDefault"] = boolean_default
+
+            fieldList.append([field['valueName'], field['valueType'], field_metadata])
+
+            requirement = "Optional" if field['valueOptional'] else "Required"
+            description = f"{requirement}: {field['valueDescription']}"
+            if field.get('valueRestrictions'):
+                description += f"; restrictions: {field['valueRestrictions']}"
+            if field['valueOptional']:
+                description += f"; blank/default omits field; OBS default: {field.get('valueOptionalBehavior')}"
             paramDef = {
                 "type": typeName,
-                "description": field['valueOptional'] and "Optional: " or "Required: "+ field['valueDescription']
+                "description": description
             }
+
+            if field['valueType'] == "Object" and not field['valueOptional']:
+                paramDef["default"] = "{}"
+            elif field['valueOptional'] and field['valueType'] == "Number":
+                paramDef["default"] = ""
+            elif field['valueOptional'] and field['valueType'] == "Boolean":
+                paramDef["default"] = field_metadata["omitIfDefault"]
             params[field['valueName']] = paramDef
 
 

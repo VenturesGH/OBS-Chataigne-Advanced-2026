@@ -1,0 +1,9 @@
+{
+  "name": "obs-chataigne-advanced-2026",
+  "version": "2026.11.0",
+  "private": true,
+  "description": "Tests for the OBS Chataigne Advanced 2026 module",
+  "scripts": {
+    "test": "node tests/genericCommandExecutor.test.js && node tests/protocolIntegration.test.js"
+  }
+}
