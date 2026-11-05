@@ -97,8 +97,12 @@ assert.ok(moduleSource.indexOf("function wsMessageReceived(message)") !== -1,
     "WebSocket clients must use Chataigne's one-argument callback");
 
 // OBS sends Hello only once, immediately after the socket opens. Reconnecting
-// from init guarantees the message callback is installed before that frame.
+// on the first update tick guarantees the script-loading transaction is over.
 context.init();
+assert.deepStrictEqual(context.local.enabled.setHistory, []);
+context.update(0.02);
+assert.deepStrictEqual(context.local.enabled.setHistory, [false, true]);
+context.update(0.02);
 assert.deepStrictEqual(context.local.enabled.setHistory, [false, true]);
 
 // Every protocol request must be exposed as a generated Chataigne command.

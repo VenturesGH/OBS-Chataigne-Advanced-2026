@@ -2,7 +2,7 @@
 
 Een protocol-gegenereerde Chataigne-module voor OBS WebSocket 5.x. Deze editie is in 2026 met AI-assistentie herschreven, handmatig nagelopen en live gevalideerd tegen Chataigne 1.10.4 en OBS 33.0.0 / obs-websocket 5.7.6.
 
-Versie 2026.11.1 voorkomt bovendien een opstartrace waarbij Chataigne de socket al kon openen voordat het modulescript geladen was. De groene verbindingsindicator was dan zichtbaar, maar OBS' eenmalige Hello-frame werd gemist en er volgde geen Identify. De module heropent de socket nu gecontroleerd vanuit `init()` nadat de callback beschikbaar is.
+Versie 2026.11.2 voorkomt bovendien een opstartrace waarbij Chataigne de socket al kon openen voordat het modulescript geladen was. De groene verbindingsindicator was dan zichtbaar, maar OBS' eenmalige Hello-frame werd gemist en er volgde geen Identify. De module plant de herverbinding in `init()` en voert haar uit op de eerste 50 Hz-`update()`-tick, dus pas nadat Chataigne de script-loading transaction volledig heeft afgesloten.
 
 De module is afgeleid van [KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced](https://github.com/KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced), dat zelf voortbouwt op [Edrig/OBS-Websocket-Chataigne-Module](https://github.com/Edrig/OBS-Websocket-Chataigne-Module). Dank aan beide auteurs en aan Benjamin Kuperberg voor [Chataigne](https://benjamin.kuperberg.fr/chataigne/en).
 
@@ -55,7 +55,7 @@ De generator haalt `docs/generated/protocol.json` van de officiële [obs-websock
 
 De live validatie op 5 november 2026 gaf OBS-statuscode `100` voor `GetMonitorList`, `GetCanvasList` en een door deze module geserialiseerde `OpenSourceProjector` met uitsluitend `sourceName` en `monitorIndex`.
 
-Bij diagnose kunnen `Log Incoming` en `Log Outgoing` bovenin de module-inspector tijdelijk worden ingeschakeld. Een gezonde start toont achtereenvolgens Hello, Identify, Identified en de automatisch verzonden Get-requests.
+Bij diagnose kunnen `Log Incoming` en `Log Outgoing` bovenin de module-inspector tijdelijk worden ingeschakeld. Een gezonde start toont achtereenvolgens Hello, Identify, Identified en de automatisch verzonden Get-requests. De Connection-waarde `identified` wordt tijdens een scriptreload eerst expliciet `0` en pas na OBS' Identified-frame weer `1`, zodat een enkel geopende socket niet langer op een volledige protocolsessie lijkt.
 
 ## Compatibiliteit
 

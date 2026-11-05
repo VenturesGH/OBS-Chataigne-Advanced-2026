@@ -356,6 +356,7 @@ function updateGetMonitorListSummary(monitors, responseContainer, mergedContaine
 var customResponseHandlers = {};
 
 var isIdentified = false;
+var reconnectAfterInit = false;
 var subscriptionParameterNames = [
     "general", "config", "scenes", "inputs", "transitions", "filters",
     "outputs", "sceneItems", "mediaInputs", "vendors", "ui", "canvases",
@@ -376,10 +377,20 @@ var subscriptionParameterNames = [
  */
 function init() {
     isIdentified = false;
-    if (local.enabled.get()) {
-        local.enabled.set(false);
-        local.enabled.set(true);
-    }
+    updateConnectionValues("identified", false);
+    reconnectAfterInit = local.enabled.get();
+}
+
+/**
+ * Declaring update gives Chataigne a 50 Hz callback. Waiting for its first tick
+ * is essential: init itself still runs inside the script-loading transaction,
+ * so reconnecting there can reproduce the same lost-Hello race.
+ */
+function update(deltaTime) {
+    if (!reconnectAfterInit) return;
+    reconnectAfterInit = false;
+    local.enabled.set(false);
+    local.enabled.set(true);
 }
 
 /**
@@ -1213,6 +1224,7 @@ function genericCommandExecutor(data, requestType, reqId, a, b, c, d, e, f, g, h
 
     if (!validateRequestData(requestType, requestData, commandData['fieldList'])) return;
 
+    script.log("OBS command invoked: " + requestType);
     sendObsCommand(requestType, requestData, reqId);
 }
 
