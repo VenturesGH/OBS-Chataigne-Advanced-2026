@@ -2,10 +2,10 @@
   "name": "OBS Chataigne Advanced 2026",
   "type": "WebSocket Client",
   "path": "Software",
-  "version": "2026.11.3",
-  "description": "Protocol-generated OBS WebSocket 5.x module for Chataigne, rewritten with AI assistance and verified against OBS 33.",
+  "version": "2026.11.5",
+  "description": "Controls OBS Studio via OBS WebSocket 5.x.",
   "url": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026",
-  "downloadURL": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026/archive/main.zip",
+  "downloadURL": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026/archive/refs/heads/main.zip",
   "hasInput": true,
   "hasOutput": true,
   "hideDefaultCommands": true,
@@ -23,14 +23,14 @@
     "serverPath": "127.0.0.1:4455"
   },
   "parameters": {
-    "Enable Authentication": {
+    "Enable Authentification": {
       "type": "Boolean",
       "default": true
     },
     "Password": {
       "type": "String",
       "dependency": {
-        "source": "Enable Authentication",
+        "source": "Enable Authentification",
         "value": true,
         "check": "equals",
         "action": "show"
@@ -82,10 +82,6 @@
         "type": "Boolean",
         "default": true
       },
-      "Canvases": {
-        "type": "Boolean",
-        "default": true
-      },
       "InputVolumeMeters": {
         "type": "Boolean",
         "default": false
@@ -101,11 +97,15 @@
       "SceneItemTransformChanged": {
         "type": "Boolean",
         "default": false
+      },
+      "Canvases": {
+        "type": "Boolean",
+        "default": true
       }
     },
     "Documentation": {
       "type": "String",
-      "default": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026"
+      "default": "https://github.com/KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced"
     }
   },
   "values": {
@@ -122,13 +122,50 @@
     "OBSAdvanced.js"
   ],
   "commands": {
+    "SetSourceVisibility": {
+      "menu": "Scene Items",
+      "callback": "setSourceVisibility",
+      "setupCallback": "populateSceneChoices",
+      "parameters": {
+        "Scene": {
+          "type": "Enum",
+          "options": {
+            "Current program scene": "current",
+            "All scenes": "all",
+            "Enter a scene name": "manual"
+          },
+          "default": "Current program scene"
+        },
+        "Scene Name": {
+          "type": "String",
+          "description": "Exact OBS scene name for the manual choice"
+        },
+        "All Sources": {
+          "type": "Boolean",
+          "default": false
+        },
+        "Source Name": {
+          "type": "String",
+          "description": "Exact OBS source name"
+        },
+        "Visibility": {
+          "type": "Enum",
+          "options": {
+            "Show": "show",
+            "Hide": "hide",
+            "Toggle": "toggle"
+          },
+          "default": "Show"
+        }
+      }
+    },
     "Raw WS Message": {
       "menu": "",
       "callback": "sendRawWSMessage",
       "parameters": {
         "data": {
           "type": "String",
-          "default": "{\"op\": 6, \"d\": {\"requestType\": \"GetStats\", \"requestId\": 0, \"requestData\": {\"foo\": \"bar\"}}}"
+          "default": "{\"op\": 6, \"d\": {\"requestType\": \"GetStats\", \"requestId\": \"0\"}}"
         }
       }
     },
@@ -141,37 +178,12 @@
           "default": "GetStats"
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "requestData": {
           "type": "String",
-          "default": "{\"foo\": \"bar\"}"
-        }
-      }
-    },
-    "Request Batch": {
-      "menu": "",
-      "callback": "sendRequestBatch",
-      "parameters": {
-        "requestId": {
-          "type": "String",
-          "default": "batch-0",
-          "description": "String used to correlate the batch response"
-        },
-        "haltOnFailure": {
-          "type": "Boolean",
-          "default": false
-        },
-        "executionType": {
-          "type": "Integer",
-          "default": 0,
-          "description": "0 SerialRealtime, 1 SerialFrame, 2 Parallel"
-        },
-        "requests": {
-          "type": "String",
-          "default": "[{\"requestType\": \"GetVersion\"}]",
-          "description": "JSON array of OBS request objects"
+          "default": "{}"
         }
       }
     },
@@ -190,7 +202,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -202,7 +214,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"realm\", \"String\", {\"optional\": false}], [\"slotName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"realm\", \"String\", false], [\"slotName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -210,16 +222,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "realm": {
           "type": "String",
-          "description": "Required: The data realm to select. `OBS_WEBSOCKET_DATA_REALM_GLOBAL` or `OBS_WEBSOCKET_DATA_REALM_PROFILE`"
+          "description": "Required. The data realm to select. `OBS_WEBSOCKET_DATA_REALM_GLOBAL` or `OBS_WEBSOCKET_DATA_REALM_PROFILE`"
         },
         "slotName": {
           "type": "String",
-          "description": "Required: The name of the slot to retrieve data from"
+          "description": "Required. The name of the slot to retrieve data from"
         }
       }
     },
@@ -230,7 +242,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"realm\", \"String\", {\"optional\": false}], [\"slotName\", \"String\", {\"optional\": false}], [\"slotValue\", \"Any\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"realm\", \"String\", false], [\"slotName\", \"String\", false], [\"slotValue\", \"Any\", false]]}"
         },
         "request": {
           "type": "String",
@@ -238,20 +250,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "realm": {
           "type": "String",
-          "description": "Required: The data realm to select. `OBS_WEBSOCKET_DATA_REALM_GLOBAL` or `OBS_WEBSOCKET_DATA_REALM_PROFILE`"
+          "description": "Required. The data realm to select. `OBS_WEBSOCKET_DATA_REALM_GLOBAL` or `OBS_WEBSOCKET_DATA_REALM_PROFILE`"
         },
         "slotName": {
           "type": "String",
-          "description": "Required: The name of the slot to retrieve data from"
+          "description": "Required. The name of the slot to retrieve data from"
         },
         "slotValue": {
           "type": "String",
-          "description": "Required: The value to apply to the slot"
+          "description": "Required. The value to apply to the slot"
         }
       }
     },
@@ -270,7 +282,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -282,7 +294,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"sceneCollectionName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"sceneCollectionName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -290,12 +302,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "sceneCollectionName": {
           "type": "String",
-          "description": "Required: Name of the scene collection to switch to"
+          "description": "Required. Name of the scene collection to switch to"
         }
       }
     },
@@ -306,7 +318,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"sceneCollectionName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"sceneCollectionName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -314,12 +326,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "sceneCollectionName": {
           "type": "String",
-          "description": "Required: Name for the new scene collection"
+          "description": "Required. Name for the new scene collection"
         }
       }
     },
@@ -338,7 +350,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -350,7 +362,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"profileName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"profileName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -358,12 +370,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "profileName": {
           "type": "String",
-          "description": "Required: Name of the profile to switch to"
+          "description": "Required. Name of the profile to switch to"
         }
       }
     },
@@ -374,7 +386,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"profileName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"profileName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -382,12 +394,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "profileName": {
           "type": "String",
-          "description": "Required: Name for the new profile"
+          "description": "Required. Name for the new profile"
         }
       }
     },
@@ -398,7 +410,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"profileName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"profileName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -406,12 +418,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "profileName": {
           "type": "String",
-          "description": "Required: Name of the profile to remove"
+          "description": "Required. Name of the profile to remove"
         }
       }
     },
@@ -422,7 +434,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"parameterCategory\", \"String\", {\"optional\": false}], [\"parameterName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"parameterCategory\", \"String\", false], [\"parameterName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -430,16 +442,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "parameterCategory": {
           "type": "String",
-          "description": "Required: Category of the parameter to get"
+          "description": "Required. Category of the parameter to get"
         },
         "parameterName": {
           "type": "String",
-          "description": "Required: Name of the parameter to get"
+          "description": "Required. Name of the parameter to get"
         }
       }
     },
@@ -450,7 +462,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"parameterCategory\", \"String\", {\"optional\": false}], [\"parameterName\", \"String\", {\"optional\": false}], [\"parameterValue\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"parameterCategory\", \"String\", false], [\"parameterName\", \"String\", false], [\"parameterValue\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -458,20 +470,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "parameterCategory": {
           "type": "String",
-          "description": "Required: Category of the parameter to set"
+          "description": "Required. Category of the parameter to set"
         },
         "parameterName": {
           "type": "String",
-          "description": "Required: Name of the parameter to set"
+          "description": "Required. Name of the parameter to set"
         },
         "parameterValue": {
           "type": "String",
-          "description": "Required: Value of the parameter to set. Use `null` to delete"
+          "description": "Required. Value of the parameter to set. Use `null` to delete"
         }
       }
     },
@@ -490,7 +502,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -502,7 +514,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"fpsNumerator\", \"Number\", {\"optional\": true}], [\"fpsDenominator\", \"Number\", {\"optional\": true}], [\"baseWidth\", \"Number\", {\"optional\": true}], [\"baseHeight\", \"Number\", {\"optional\": true}], [\"outputWidth\", \"Number\", {\"optional\": true}], [\"outputHeight\", \"Number\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"fpsNumerator\", \"Number\", true], [\"fpsDenominator\", \"Number\", true], [\"baseWidth\", \"Number\", true], [\"baseHeight\", \"Number\", true], [\"outputWidth\", \"Number\", true], [\"outputHeight\", \"Number\", true]]}"
         },
         "request": {
           "type": "String",
@@ -510,38 +522,32 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "fpsNumerator": {
           "type": "String",
-          "description": "Optional: Numerator of the fractional FPS value; restrictions: >= 1; blank/default omits field; OBS default: Not changed",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Numerator of the fractional FPS value"
         },
         "fpsDenominator": {
           "type": "String",
-          "description": "Optional: Denominator of the fractional FPS value; restrictions: >= 1; blank/default omits field; OBS default: Not changed",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Denominator of the fractional FPS value"
         },
         "baseWidth": {
           "type": "String",
-          "description": "Optional: Width of the base (canvas) resolution in pixels; restrictions: >= 1, <= 4096; blank/default omits field; OBS default: Not changed",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Width of the base (canvas) resolution in pixels"
         },
         "baseHeight": {
           "type": "String",
-          "description": "Optional: Height of the base (canvas) resolution in pixels; restrictions: >= 1, <= 4096; blank/default omits field; OBS default: Not changed",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Height of the base (canvas) resolution in pixels"
         },
         "outputWidth": {
           "type": "String",
-          "description": "Optional: Width of the output resolution in pixels; restrictions: >= 1, <= 4096; blank/default omits field; OBS default: Not changed",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Width of the output resolution in pixels"
         },
         "outputHeight": {
           "type": "String",
-          "description": "Optional: Height of the output resolution in pixels; restrictions: >= 1, <= 4096; blank/default omits field; OBS default: Not changed",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Height of the output resolution in pixels"
         }
       }
     },
@@ -560,7 +566,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -572,7 +578,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"streamServiceType\", \"String\", {\"optional\": false}], [\"streamServiceSettings\", \"Object\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"streamServiceType\", \"String\", false], [\"streamServiceSettings\", \"Object\", false]]}"
         },
         "request": {
           "type": "String",
@@ -580,17 +586,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "streamServiceType": {
           "type": "String",
-          "description": "Required: Type of stream service to apply. Example: `rtmp_common` or `rtmp_custom`"
+          "description": "Required. Type of stream service to apply. Example: `rtmp_common` or `rtmp_custom`"
         },
         "streamServiceSettings": {
           "type": "String",
-          "description": "Required: Settings to apply to the service",
-          "default": "{}"
+          "description": "Required. Settings to apply to the service"
         }
       }
     },
@@ -609,7 +614,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -621,7 +626,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"recordDirectory\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"recordDirectory\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -629,12 +634,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "recordDirectory": {
           "type": "String",
-          "description": "Required: Output directory"
+          "description": "Required. Output directory"
         }
       }
     },
@@ -653,7 +658,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -665,7 +670,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -673,20 +678,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using the sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source"
         }
       }
     },
@@ -697,7 +702,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"filterKind\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"filterKind\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -705,12 +710,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "filterKind": {
           "type": "String",
-          "description": "Required: Filter kind to get the default settings for"
+          "description": "Required. Filter kind to get the default settings for"
         }
       }
     },
@@ -721,7 +726,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"filterName\", \"String\", {\"optional\": false}], [\"filterKind\", \"String\", {\"optional\": false}], [\"filterSettings\", \"Object\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"filterName\", \"String\", false], [\"filterKind\", \"String\", false], [\"filterSettings\", \"Object\", true]]}"
         },
         "request": {
           "type": "String",
@@ -729,32 +734,32 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using the sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source to add the filter to; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source to add the filter to"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source to add the filter to; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source to add the filter to"
         },
         "filterName": {
           "type": "String",
-          "description": "Required: Name of the new filter to be created"
+          "description": "Required. Name of the new filter to be created"
         },
         "filterKind": {
           "type": "String",
-          "description": "Required: The kind of filter to be created"
+          "description": "Required. The kind of filter to be created"
         },
         "filterSettings": {
           "type": "String",
-          "description": "Optional: Settings object to initialize the filter with; blank/default omits field; OBS default: Default settings used"
+          "description": "Optional (blank uses OBS default). Settings object to initialize the filter with"
         }
       }
     },
@@ -765,7 +770,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"filterName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"filterName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -773,24 +778,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using the sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source the filter is on"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source the filter is on"
         },
         "filterName": {
           "type": "String",
-          "description": "Required: Name of the filter to remove"
+          "description": "Required. Name of the filter to remove"
         }
       }
     },
@@ -801,7 +806,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"filterName\", \"String\", {\"optional\": false}], [\"newFilterName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"filterName\", \"String\", false], [\"newFilterName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -809,28 +814,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using the sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source the filter is on"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source the filter is on"
         },
         "filterName": {
           "type": "String",
-          "description": "Required: Current name of the filter"
+          "description": "Required. Current name of the filter"
         },
         "newFilterName": {
           "type": "String",
-          "description": "Required: New name for the filter"
+          "description": "Required. New name for the filter"
         }
       }
     },
@@ -841,7 +846,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"filterName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"filterName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -849,24 +854,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using the sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source"
         },
         "filterName": {
           "type": "String",
-          "description": "Required: Name of the filter"
+          "description": "Required. Name of the filter"
         }
       }
     },
@@ -877,7 +882,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"filterName\", \"String\", {\"optional\": false}], [\"filterIndex\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"filterName\", \"String\", false], [\"filterIndex\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -885,28 +890,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using the sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source the filter is on"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source the filter is on"
         },
         "filterName": {
           "type": "String",
-          "description": "Required: Name of the filter"
+          "description": "Required. Name of the filter"
         },
         "filterIndex": {
           "type": "Integer",
-          "description": "Required: New index position of the filter; restrictions: >= 0"
+          "description": "Required. New index position of the filter"
         }
       }
     },
@@ -917,7 +922,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"filterName\", \"String\", {\"optional\": false}], [\"filterSettings\", \"Object\", {\"optional\": false}], [\"overlay\", \"Boolean\", {\"optional\": true, \"omitIfDefault\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"filterName\", \"String\", false], [\"filterSettings\", \"Object\", false], [\"overlay\", \"Boolean\", true]]}"
         },
         "request": {
           "type": "String",
@@ -925,34 +930,32 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using the sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source the filter is on"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source the filter is on"
         },
         "filterName": {
           "type": "String",
-          "description": "Required: Name of the filter to set the settings of"
+          "description": "Required. Name of the filter to set the settings of"
         },
         "filterSettings": {
           "type": "String",
-          "description": "Required: Object of settings to apply",
-          "default": "{}"
+          "description": "Required. Object of settings to apply"
         },
         "overlay": {
-          "type": "Boolean",
-          "description": "Optional: True == apply the settings on top of existing ones, False == reset the input to its defaults, then apply settings.; blank/default omits field; OBS default: true",
-          "default": true
+          "type": "String",
+          "description": "Optional (blank uses OBS default). True == apply the settings on top of existing ones, False == reset the input to its defaults, then apply settings."
         }
       }
     },
@@ -963,7 +966,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"filterName\", \"String\", {\"optional\": false}], [\"filterEnabled\", \"Boolean\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"filterName\", \"String\", false], [\"filterEnabled\", \"Boolean\", false]]}"
         },
         "request": {
           "type": "String",
@@ -971,28 +974,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using the sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source the filter is on"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source the filter is on; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source the filter is on"
         },
         "filterName": {
           "type": "String",
-          "description": "Required: Name of the filter"
+          "description": "Required. Name of the filter"
         },
         "filterEnabled": {
           "type": "Boolean",
-          "description": "Required: New enable state of the filter"
+          "description": "Required. New enable state of the filter"
         }
       }
     },
@@ -1011,7 +1014,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -1031,7 +1034,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -1043,7 +1046,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"eventData\", \"Object\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"eventData\", \"Object\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1051,13 +1054,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "eventData": {
           "type": "String",
-          "description": "Required: Data payload to emit to all receivers",
-          "default": "{}"
+          "description": "Required. Data payload to emit to all receivers"
         }
       }
     },
@@ -1068,7 +1070,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"vendorName\", \"String\", {\"optional\": false}], [\"requestType\", \"String\", {\"optional\": false}], [\"requestData\", \"Object\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"vendorName\", \"String\", false], [\"requestType\", \"String\", false], [\"requestData\", \"Object\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1076,20 +1078,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "vendorName": {
           "type": "String",
-          "description": "Required: Name of the vendor to use"
+          "description": "Required. Name of the vendor to use"
         },
         "requestType": {
           "type": "String",
-          "description": "Required: The request type to call"
+          "description": "Required. The request type to call"
         },
         "requestData": {
           "type": "String",
-          "description": "Optional: Object containing appropriate request data; blank/default omits field; OBS default: {}"
+          "description": "Optional (blank uses OBS default). Object containing appropriate request data"
         }
       }
     },
@@ -1108,7 +1110,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -1120,7 +1122,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"hotkeyName\", \"String\", {\"optional\": false}], [\"contextName\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"hotkeyName\", \"String\", false], [\"contextName\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1128,16 +1130,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "hotkeyName": {
           "type": "String",
-          "description": "Required: Name of the hotkey to trigger"
+          "description": "Required. Name of the hotkey to trigger"
         },
         "contextName": {
           "type": "String",
-          "description": "Optional: Name of context of the hotkey to trigger; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of context of the hotkey to trigger"
         }
       }
     },
@@ -1148,7 +1150,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"keyId\", \"String\", {\"optional\": true}], [\"keyModifiers\", \"Object\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"keyId\", \"String\", true], [\"keyModifiers\", \"Object\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1156,16 +1158,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "keyId": {
           "type": "String",
-          "description": "Optional: The OBS key ID to use. See https://github.com/obsproject/obs-studio/blob/master/libobs/obs-hotkeys.h; blank/default omits field; OBS default: Not pressed"
+          "description": "Optional (blank uses OBS default). The OBS key ID to use. See https://github.com/obsproject/obs-studio/blob/master/libobs/obs-hotkeys.h"
         },
         "keyModifiers": {
           "type": "String",
-          "description": "Optional: Object containing key modifiers to apply; blank/default omits field; OBS default: Ignored"
+          "description": "Optional (blank uses OBS default). Object containing key modifiers to apply"
         }
       }
     },
@@ -1176,7 +1178,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"sleepMillis\", \"Number\", {\"optional\": true}], [\"sleepFrames\", \"Number\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"sleepMillis\", \"Number\", true], [\"sleepFrames\", \"Number\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1184,18 +1186,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "sleepMillis": {
           "type": "String",
-          "description": "Optional: Number of milliseconds to sleep for (if `SERIAL_REALTIME` mode); restrictions: >= 0, <= 50000; blank/default omits field; OBS default: Unknown",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Number of milliseconds to sleep for (if `SERIAL_REALTIME` mode)"
         },
         "sleepFrames": {
           "type": "String",
-          "description": "Optional: Number of frames to sleep for (if `SERIAL_FRAME` mode); restrictions: >= 0, <= 10000; blank/default omits field; OBS default: Unknown",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Number of frames to sleep for (if `SERIAL_FRAME` mode)"
         }
       }
     },
@@ -1206,7 +1206,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputKind\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputKind\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1214,12 +1214,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputKind": {
           "type": "String",
-          "description": "Optional: Restrict the array to only inputs of the specified kind; blank/default omits field; OBS default: All kinds included"
+          "description": "Optional (blank uses OBS default). Restrict the array to only inputs of the specified kind"
         }
       }
     },
@@ -1230,7 +1230,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"unversioned\", \"Boolean\", {\"optional\": true, \"omitIfDefault\": false}]]}"
+          "default": "{\"fieldList\": [[\"unversioned\", \"Boolean\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1238,13 +1238,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "unversioned": {
-          "type": "Boolean",
-          "description": "Optional: True == Return all kinds as unversioned, False == Return with version suffixes (if available); blank/default omits field; OBS default: false",
-          "default": false
+          "type": "String",
+          "description": "Optional (blank uses OBS default). True == Return all kinds as unversioned, False == Return with version suffixes (if available)"
         }
       }
     },
@@ -1263,7 +1262,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -1275,7 +1274,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"inputName\", \"String\", {\"optional\": false}], [\"inputKind\", \"String\", {\"optional\": false}], [\"inputSettings\", \"Object\", {\"optional\": true}], [\"sceneItemEnabled\", \"Boolean\", {\"optional\": true, \"omitIfDefault\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"inputName\", \"String\", false], [\"inputKind\", \"String\", false], [\"inputSettings\", \"Object\", true], [\"sceneItemEnabled\", \"Boolean\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1283,37 +1282,36 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene to add the input to as a scene item; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene to add the input to as a scene item"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene to add the input to as a scene item; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene to add the input to as a scene item"
         },
         "inputName": {
           "type": "String",
-          "description": "Required: Name of the new input to created"
+          "description": "Required. Name of the new input to created"
         },
         "inputKind": {
           "type": "String",
-          "description": "Required: The kind of input to be created"
+          "description": "Required. The kind of input to be created"
         },
         "inputSettings": {
           "type": "String",
-          "description": "Optional: Settings object to initialize the input with; blank/default omits field; OBS default: Default settings used"
+          "description": "Optional (blank uses OBS default). Settings object to initialize the input with"
         },
         "sceneItemEnabled": {
-          "type": "Boolean",
-          "description": "Optional: Whether to set the created scene item to enabled or disabled; blank/default omits field; OBS default: True",
-          "default": true
+          "type": "String",
+          "description": "Optional (blank uses OBS default). Whether to set the created scene item to enabled or disabled"
         }
       }
     },
@@ -1324,7 +1322,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1332,16 +1330,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to remove; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to remove"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to remove; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to remove"
         }
       }
     },
@@ -1352,7 +1350,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"newInputName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"newInputName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1360,20 +1358,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Current input name; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Current input name"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: Current input UUID; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Current input UUID"
         },
         "newInputName": {
           "type": "String",
-          "description": "Required: New name for the input"
+          "description": "Required. New name for the input"
         }
       }
     },
@@ -1384,7 +1382,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputKind\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputKind\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1392,12 +1390,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputKind": {
           "type": "String",
-          "description": "Required: Input kind to get the default settings for"
+          "description": "Required. Input kind to get the default settings for"
         }
       }
     },
@@ -1408,7 +1406,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1416,16 +1414,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to get the settings of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to get the settings of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to get the settings of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to get the settings of"
         }
       }
     },
@@ -1436,7 +1434,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"inputSettings\", \"Object\", {\"optional\": false}], [\"overlay\", \"Boolean\", {\"optional\": true, \"omitIfDefault\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"inputSettings\", \"Object\", false], [\"overlay\", \"Boolean\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1444,26 +1442,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to set the settings of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to set the settings of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to set the settings of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to set the settings of"
         },
         "inputSettings": {
           "type": "String",
-          "description": "Required: Object of settings to apply",
-          "default": "{}"
+          "description": "Required. Object of settings to apply"
         },
         "overlay": {
-          "type": "Boolean",
-          "description": "Optional: True == apply the settings on top of existing ones, False == reset the input to its defaults, then apply settings.; blank/default omits field; OBS default: true",
-          "default": true
+          "type": "String",
+          "description": "Optional (blank uses OBS default). True == apply the settings on top of existing ones, False == reset the input to its defaults, then apply settings."
         }
       }
     },
@@ -1474,7 +1470,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1482,16 +1478,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of input to get the mute state of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of input to get the mute state of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of input to get the mute state of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of input to get the mute state of"
         }
       }
     },
@@ -1502,7 +1498,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"inputMuted\", \"Boolean\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"inputMuted\", \"Boolean\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1510,20 +1506,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to set the mute state of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to set the mute state of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to set the mute state of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to set the mute state of"
         },
         "inputMuted": {
           "type": "Boolean",
-          "description": "Required: Whether to mute the input or not"
+          "description": "Required. Whether to mute the input or not"
         }
       }
     },
@@ -1534,7 +1530,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1542,16 +1538,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to toggle the mute state of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to toggle the mute state of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to toggle the mute state of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to toggle the mute state of"
         }
       }
     },
@@ -1562,7 +1558,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1570,16 +1566,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to get the volume of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to get the volume of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to get the volume of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to get the volume of"
         }
       }
     },
@@ -1590,7 +1586,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"inputVolumeMul\", \"Number\", {\"optional\": true}], [\"inputVolumeDb\", \"Number\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"inputVolumeMul\", \"Number\", true], [\"inputVolumeDb\", \"Number\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1598,26 +1594,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to set the volume of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to set the volume of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to set the volume of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to set the volume of"
         },
         "inputVolumeMul": {
           "type": "String",
-          "description": "Optional: Volume setting in mul; restrictions: >= 0, <= 20; blank/default omits field; OBS default: `inputVolumeDb` should be specified",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Volume setting in mul"
         },
         "inputVolumeDb": {
           "type": "String",
-          "description": "Optional: Volume setting in dB; restrictions: >= -100, <= 26; blank/default omits field; OBS default: `inputVolumeMul` should be specified",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Volume setting in dB"
         }
       }
     },
@@ -1628,7 +1622,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1636,16 +1630,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to get the audio balance of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to get the audio balance of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to get the audio balance of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to get the audio balance of"
         }
       }
     },
@@ -1656,7 +1650,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"inputAudioBalance\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"inputAudioBalance\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1664,20 +1658,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to set the audio balance of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to set the audio balance of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to set the audio balance of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to set the audio balance of"
         },
         "inputAudioBalance": {
           "type": "Float",
-          "description": "Required: New audio balance value; restrictions: >= 0.0, <= 1.0"
+          "description": "Required. New audio balance value"
         }
       }
     },
@@ -1688,7 +1682,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1696,16 +1690,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to get the audio sync offset of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to get the audio sync offset of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to get the audio sync offset of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to get the audio sync offset of"
         }
       }
     },
@@ -1716,7 +1710,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"inputAudioSyncOffset\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"inputAudioSyncOffset\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1724,20 +1718,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to set the audio sync offset of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to set the audio sync offset of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to set the audio sync offset of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to set the audio sync offset of"
         },
         "inputAudioSyncOffset": {
           "type": "Float",
-          "description": "Required: New audio sync offset in milliseconds; restrictions: >= -950, <= 20000"
+          "description": "Required. New audio sync offset in milliseconds"
         }
       }
     },
@@ -1748,7 +1742,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1756,16 +1750,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to get the audio monitor type of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to get the audio monitor type of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to get the audio monitor type of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to get the audio monitor type of"
         }
       }
     },
@@ -1776,7 +1770,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"monitorType\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"monitorType\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1784,20 +1778,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to set the audio monitor type of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to set the audio monitor type of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to set the audio monitor type of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to set the audio monitor type of"
         },
         "monitorType": {
           "type": "String",
-          "description": "Required: Audio monitor type"
+          "description": "Required. Audio monitor type"
         }
       }
     },
@@ -1808,7 +1802,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1816,16 +1810,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input"
         }
       }
     },
@@ -1836,7 +1830,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"inputAudioTracks\", \"Object\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"inputAudioTracks\", \"Object\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1844,21 +1838,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input"
         },
         "inputAudioTracks": {
           "type": "String",
-          "description": "Required: Track settings to apply",
-          "default": "{}"
+          "description": "Required. Track settings to apply"
         }
       }
     },
@@ -1869,7 +1862,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1877,16 +1870,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input"
         }
       }
     },
@@ -1897,7 +1890,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"inputDeinterlaceMode\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"inputDeinterlaceMode\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1905,20 +1898,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input"
         },
         "inputDeinterlaceMode": {
           "type": "String",
-          "description": "Required: Deinterlace mode for the input"
+          "description": "Required. Deinterlace mode for the input"
         }
       }
     },
@@ -1929,7 +1922,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -1937,16 +1930,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input"
         }
       }
     },
@@ -1957,7 +1950,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"inputDeinterlaceFieldOrder\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"inputDeinterlaceFieldOrder\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1965,20 +1958,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input"
         },
         "inputDeinterlaceFieldOrder": {
           "type": "String",
-          "description": "Required: Deinterlace field order for the input"
+          "description": "Required. Deinterlace field order for the input"
         }
       }
     },
@@ -1989,7 +1982,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"propertyName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"propertyName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -1997,20 +1990,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input"
         },
         "propertyName": {
           "type": "String",
-          "description": "Required: Name of the list property to get the items of"
+          "description": "Required. Name of the list property to get the items of"
         }
       }
     },
@@ -2021,7 +2014,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"propertyName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"propertyName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2029,20 +2022,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input"
         },
         "propertyName": {
           "type": "String",
-          "description": "Required: Name of the button property to press"
+          "description": "Required. Name of the button property to press"
         }
       }
     },
@@ -2053,7 +2046,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -2061,16 +2054,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the media input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the media input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the media input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the media input"
         }
       }
     },
@@ -2081,7 +2074,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"mediaCursor\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"mediaCursor\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2089,20 +2082,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the media input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the media input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the media input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the media input"
         },
         "mediaCursor": {
           "type": "Float",
-          "description": "Required: New cursor position to set; restrictions: >= 0"
+          "description": "Required. New cursor position to set"
         }
       }
     },
@@ -2113,7 +2106,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"mediaCursorOffset\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"mediaCursorOffset\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2121,20 +2114,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the media input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the media input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the media input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the media input"
         },
         "mediaCursorOffset": {
           "type": "Float",
-          "description": "Required: Value to offset the current cursor position by"
+          "description": "Required. Value to offset the current cursor position by"
         }
       }
     },
@@ -2145,7 +2138,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}], [\"mediaAction\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true], [\"mediaAction\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2153,20 +2146,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the media input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the media input"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the media input; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the media input"
         },
         "mediaAction": {
           "type": "String",
-          "description": "Required: Identifier of the `ObsMediaInputAction` enum"
+          "description": "Required. Identifier of the `ObsMediaInputAction` enum"
         }
       }
     },
@@ -2185,7 +2178,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2205,7 +2198,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2225,7 +2218,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2245,7 +2238,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2265,7 +2258,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2285,7 +2278,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2305,7 +2298,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2325,7 +2318,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2345,7 +2338,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2365,7 +2358,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2385,7 +2378,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2397,7 +2390,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"outputName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"outputName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2405,12 +2398,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "outputName": {
           "type": "String",
-          "description": "Required: Output name"
+          "description": "Required. Output name"
         }
       }
     },
@@ -2421,7 +2414,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"outputName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"outputName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2429,12 +2422,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "outputName": {
           "type": "String",
-          "description": "Required: Output name"
+          "description": "Required. Output name"
         }
       }
     },
@@ -2445,7 +2438,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"outputName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"outputName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2453,12 +2446,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "outputName": {
           "type": "String",
-          "description": "Required: Output name"
+          "description": "Required. Output name"
         }
       }
     },
@@ -2469,7 +2462,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"outputName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"outputName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2477,12 +2470,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "outputName": {
           "type": "String",
-          "description": "Required: Output name"
+          "description": "Required. Output name"
         }
       }
     },
@@ -2493,7 +2486,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"outputName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"outputName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2501,12 +2494,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "outputName": {
           "type": "String",
-          "description": "Required: Output name"
+          "description": "Required. Output name"
         }
       }
     },
@@ -2517,7 +2510,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"outputName\", \"String\", {\"optional\": false}], [\"outputSettings\", \"Object\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"outputName\", \"String\", false], [\"outputSettings\", \"Object\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2525,17 +2518,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "outputName": {
           "type": "String",
-          "description": "Required: Output name"
+          "description": "Required. Output name"
         },
         "outputSettings": {
           "type": "String",
-          "description": "Required: Output settings",
-          "default": "{}"
+          "description": "Required. Output settings"
         }
       }
     },
@@ -2554,7 +2546,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2574,7 +2566,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2594,7 +2586,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2614,7 +2606,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2634,7 +2626,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2654,7 +2646,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2674,7 +2666,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2694,7 +2686,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -2706,7 +2698,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"chapterName\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"chapterName\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -2714,12 +2706,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "chapterName": {
           "type": "String",
-          "description": "Optional: Name of the new chapter; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the new chapter"
         }
       }
     },
@@ -2730,7 +2722,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -2738,20 +2730,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene to get the items of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene to get the items of"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene to get the items of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene to get the items of"
         }
       }
     },
@@ -2762,7 +2754,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -2770,20 +2762,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the group is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the group is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the group to get the items of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the group to get the items of"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the group to get the items of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the group to get the items of"
         }
       }
     },
@@ -2794,7 +2786,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": false}], [\"searchOffset\", \"Number\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sourceName\", \"String\", false], [\"searchOffset\", \"Number\", true]]}"
         },
         "request": {
           "type": "String",
@@ -2802,29 +2794,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene or group is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene or group is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene or group to search in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene or group to search in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene or group to search in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene or group to search in"
         },
         "sourceName": {
           "type": "String",
-          "description": "Required: Name of the source to find"
+          "description": "Required. Name of the source to find"
         },
         "searchOffset": {
           "type": "String",
-          "description": "Optional: Number of matches to skip during search. >= 0 means first forward. -1 means last (top) item; restrictions: >= -1; blank/default omits field; OBS default: 0",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Number of matches to skip during search. >= 0 means first forward. -1 means last (top) item"
         }
       }
     },
@@ -2835,7 +2826,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2843,24 +2834,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         }
       }
     },
@@ -2871,7 +2862,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"sceneItemEnabled\", \"Boolean\", {\"optional\": true, \"omitIfDefault\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"sceneItemEnabled\", \"Boolean\", true]]}"
         },
         "request": {
           "type": "String",
@@ -2879,33 +2870,32 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene to create the new item in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene to create the new item in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene to create the new item in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene to create the new item in"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source to add to the scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source to add to the scene"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source to add to the scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source to add to the scene"
         },
         "sceneItemEnabled": {
-          "type": "Boolean",
-          "description": "Optional: Enable state to apply to the scene item on creation; blank/default omits field; OBS default: True",
-          "default": true
+          "type": "String",
+          "description": "Optional (blank uses OBS default). Enable state to apply to the scene item on creation"
         }
       }
     },
@@ -2916,7 +2906,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -2924,24 +2914,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         }
       }
     },
@@ -2952,7 +2942,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}], [\"destinationSceneName\", \"String\", {\"optional\": true}], [\"destinationSceneUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false], [\"destinationSceneName\", \"String\", true], [\"destinationSceneUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -2960,32 +2950,32 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         },
         "destinationSceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene to create the duplicated item in; blank/default omits field; OBS default: From scene is assumed"
+          "description": "Optional (blank uses OBS default). Name of the scene to create the duplicated item in"
         },
         "destinationSceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene to create the duplicated item in; blank/default omits field; OBS default: From scene is assumed"
+          "description": "Optional (blank uses OBS default). UUID of the scene to create the duplicated item in"
         }
       }
     },
@@ -2996,7 +2986,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3004,24 +2994,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         }
       }
     },
@@ -3032,7 +3022,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}], [\"sceneItemTransform\", \"Object\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false], [\"sceneItemTransform\", \"Object\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3040,29 +3030,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         },
         "sceneItemTransform": {
           "type": "String",
-          "description": "Required: Object containing scene item transform info to update",
-          "default": "{}"
+          "description": "Required. Object containing scene item transform info to update"
         }
       }
     },
@@ -3073,7 +3062,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3081,24 +3070,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         }
       }
     },
@@ -3109,7 +3098,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}], [\"sceneItemEnabled\", \"Boolean\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false], [\"sceneItemEnabled\", \"Boolean\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3117,28 +3106,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         },
         "sceneItemEnabled": {
           "type": "Boolean",
-          "description": "Required: New enable state of the scene item"
+          "description": "Required. New enable state of the scene item"
         }
       }
     },
@@ -3149,7 +3138,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3157,24 +3146,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         }
       }
     },
@@ -3185,7 +3174,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}], [\"sceneItemLocked\", \"Boolean\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false], [\"sceneItemLocked\", \"Boolean\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3193,28 +3182,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         },
         "sceneItemLocked": {
           "type": "Boolean",
-          "description": "Required: New lock state of the scene item"
+          "description": "Required. New lock state of the scene item"
         }
       }
     },
@@ -3225,7 +3214,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3233,24 +3222,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         }
       }
     },
@@ -3261,7 +3250,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}], [\"sceneItemIndex\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false], [\"sceneItemIndex\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3269,28 +3258,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         },
         "sceneItemIndex": {
           "type": "Integer",
-          "description": "Required: New index position of the scene item; restrictions: >= 0"
+          "description": "Required. New index position of the scene item"
         }
       }
     },
@@ -3301,7 +3290,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3309,24 +3298,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         }
       }
     },
@@ -3337,7 +3326,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"sceneItemId\", \"Number\", {\"optional\": false}], [\"sceneItemBlendMode\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"sceneItemId\", \"Number\", false], [\"sceneItemBlendMode\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3345,28 +3334,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene the item is in"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene the item is in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene the item is in"
         },
         "sceneItemId": {
           "type": "Integer",
-          "description": "Required: Numeric ID of the scene item; restrictions: >= 0"
+          "description": "Required. Numeric ID of the scene item"
         },
         "sceneItemBlendMode": {
           "type": "String",
-          "description": "Required: New blend mode"
+          "description": "Required. New blend mode"
         }
       }
     },
@@ -3377,7 +3366,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -3385,12 +3374,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scenes are in; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scenes are in"
         }
       }
     },
@@ -3409,7 +3398,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3429,7 +3418,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3441,7 +3430,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -3449,16 +3438,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Scene name to set as the current program scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Scene name to set as the current program scene"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: Scene UUID to set as the current program scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Scene UUID to set as the current program scene"
         }
       }
     },
@@ -3477,7 +3466,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3489,7 +3478,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -3497,16 +3486,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Scene name to set as the current preview scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Scene name to set as the current preview scene"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: Scene UUID to set as the current preview scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Scene UUID to set as the current preview scene"
         }
       }
     },
@@ -3517,7 +3506,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3525,16 +3514,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas to create the new scene in. Leave default to assume main canvas; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas to create the new scene in. Leave default to assume main canvas"
         },
         "sceneName": {
           "type": "String",
-          "description": "Required: Name for the new scene"
+          "description": "Required. Name for the new scene"
         }
       }
     },
@@ -3545,7 +3534,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -3553,20 +3542,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene to remove; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene to remove"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene to remove; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene to remove"
         }
       }
     },
@@ -3577,7 +3566,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"newSceneName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"newSceneName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3585,24 +3574,24 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene to be renamed; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene to be renamed"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene to be renamed; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene to be renamed"
         },
         "newSceneName": {
           "type": "String",
-          "description": "Required: New name for the scene"
+          "description": "Required. New name for the scene"
         }
       }
     },
@@ -3613,7 +3602,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -3621,20 +3610,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene"
         }
       }
     },
@@ -3645,7 +3634,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sceneName\", \"String\", {\"optional\": true}], [\"sceneUuid\", \"String\", {\"optional\": true}], [\"transitionName\", \"String\", {\"optional\": true}], [\"transitionDuration\", \"Number\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sceneName\", \"String\", true], [\"sceneUuid\", \"String\", true], [\"transitionName\", \"String\", true], [\"transitionDuration\", \"Number\", true]]}"
         },
         "request": {
           "type": "String",
@@ -3653,29 +3642,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the scene is in, if using the sceneName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the scene is in, if using the sceneName field"
         },
         "sceneName": {
           "type": "String",
-          "description": "Optional: Name of the scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the scene"
         },
         "sceneUuid": {
           "type": "String",
-          "description": "Optional: UUID of the scene; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the scene"
         },
         "transitionName": {
           "type": "String",
-          "description": "Optional: Name of the scene transition to use as override. Specify `null` to remove; blank/default omits field; OBS default: Unchanged"
+          "description": "Optional (blank uses OBS default). Name of the scene transition to use as override. Specify `null` to remove"
         },
         "transitionDuration": {
           "type": "String",
-          "description": "Optional: Duration to use for any overridden transition. Specify `null` to remove; restrictions: >= 50, <= 20000; blank/default omits field; OBS default: Unchanged",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Duration to use for any overridden transition. Specify `null` to remove"
         }
       }
     },
@@ -3686,7 +3674,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -3694,20 +3682,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source to get the active state of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source to get the active state of"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source to get the active state of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source to get the active state of"
         }
       }
     },
@@ -3718,7 +3706,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"imageFormat\", \"String\", {\"optional\": false}], [\"imageWidth\", \"Number\", {\"optional\": true}], [\"imageHeight\", \"Number\", {\"optional\": true}], [\"imageCompressionQuality\", \"Number\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"imageFormat\", \"String\", false], [\"imageWidth\", \"Number\", true], [\"imageHeight\", \"Number\", true], [\"imageCompressionQuality\", \"Number\", true]]}"
         },
         "request": {
           "type": "String",
@@ -3726,39 +3714,36 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source to take a screenshot of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source to take a screenshot of"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source to take a screenshot of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source to take a screenshot of"
         },
         "imageFormat": {
           "type": "String",
-          "description": "Required: Image compression format to use. Use `GetVersion` to get compatible image formats"
+          "description": "Required. Image compression format to use. Use `GetVersion` to get compatible image formats"
         },
         "imageWidth": {
           "type": "String",
-          "description": "Optional: Width to scale the screenshot to; restrictions: >= 8, <= 4096; blank/default omits field; OBS default: Source value is used",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Width to scale the screenshot to"
         },
         "imageHeight": {
           "type": "String",
-          "description": "Optional: Height to scale the screenshot to; restrictions: >= 8, <= 4096; blank/default omits field; OBS default: Source value is used",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Height to scale the screenshot to"
         },
         "imageCompressionQuality": {
           "type": "String",
-          "description": "Optional: Compression quality to use. 0 for high compression, 100 for uncompressed. -1 to use \"default\" (whatever that means, idk); restrictions: >= -1, <= 100; blank/default omits field; OBS default: -1",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Compression quality to use. 0 for high compression, 100 for uncompressed. -1 to use \"default\" (whatever that means, idk)"
         }
       }
     },
@@ -3769,7 +3754,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"imageFormat\", \"String\", {\"optional\": false}], [\"imageFilePath\", \"String\", {\"optional\": false}], [\"imageWidth\", \"Number\", {\"optional\": true}], [\"imageHeight\", \"Number\", {\"optional\": true}], [\"imageCompressionQuality\", \"Number\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"imageFormat\", \"String\", false], [\"imageFilePath\", \"String\", false], [\"imageWidth\", \"Number\", true], [\"imageHeight\", \"Number\", true], [\"imageCompressionQuality\", \"Number\", true]]}"
         },
         "request": {
           "type": "String",
@@ -3777,43 +3762,40 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source to take a screenshot of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source to take a screenshot of"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source to take a screenshot of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source to take a screenshot of"
         },
         "imageFormat": {
           "type": "String",
-          "description": "Required: Image compression format to use. Use `GetVersion` to get compatible image formats"
+          "description": "Required. Image compression format to use. Use `GetVersion` to get compatible image formats"
         },
         "imageFilePath": {
           "type": "String",
-          "description": "Required: Path to save the screenshot file to. Eg. `C:\\Users\\user\\Desktop\\screenshot.png`"
+          "description": "Required. Path to save the screenshot file to. Eg. `C:\\Users\\user\\Desktop\\screenshot.png`"
         },
         "imageWidth": {
           "type": "String",
-          "description": "Optional: Width to scale the screenshot to; restrictions: >= 8, <= 4096; blank/default omits field; OBS default: Source value is used",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Width to scale the screenshot to"
         },
         "imageHeight": {
           "type": "String",
-          "description": "Optional: Height to scale the screenshot to; restrictions: >= 8, <= 4096; blank/default omits field; OBS default: Source value is used",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Height to scale the screenshot to"
         },
         "imageCompressionQuality": {
           "type": "String",
-          "description": "Optional: Compression quality to use. 0 for high compression, 100 for uncompressed. -1 to use \"default\" (whatever that means, idk); restrictions: >= -1, <= 100; blank/default omits field; OBS default: -1",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Compression quality to use. 0 for high compression, 100 for uncompressed. -1 to use \"default\" (whatever that means, idk)"
         }
       }
     },
@@ -3832,7 +3814,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3852,7 +3834,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3872,7 +3854,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3892,7 +3874,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3904,7 +3886,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"captionText\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"captionText\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3912,12 +3894,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "captionText": {
           "type": "String",
-          "description": "Required: Caption text"
+          "description": "Required. Caption text"
         }
       }
     },
@@ -3936,7 +3918,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3956,7 +3938,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3976,7 +3958,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -3988,7 +3970,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"transitionName\", \"String\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"transitionName\", \"String\", false]]}"
         },
         "request": {
           "type": "String",
@@ -3996,12 +3978,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "transitionName": {
           "type": "String",
-          "description": "Required: Name of the transition to make active"
+          "description": "Required. Name of the transition to make active"
         }
       }
     },
@@ -4012,7 +3994,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"transitionDuration\", \"Number\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"transitionDuration\", \"Number\", false]]}"
         },
         "request": {
           "type": "String",
@@ -4020,12 +4002,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "transitionDuration": {
           "type": "Float",
-          "description": "Required: Duration in milliseconds; restrictions: >= 50, <= 20000"
+          "description": "Required. Duration in milliseconds"
         }
       }
     },
@@ -4036,7 +4018,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"transitionSettings\", \"Object\", {\"optional\": false}], [\"overlay\", \"Boolean\", {\"optional\": true, \"omitIfDefault\": true}]]}"
+          "default": "{\"fieldList\": [[\"transitionSettings\", \"Object\", false], [\"overlay\", \"Boolean\", true]]}"
         },
         "request": {
           "type": "String",
@@ -4044,18 +4026,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "transitionSettings": {
           "type": "String",
-          "description": "Required: Settings object to apply to the transition. Can be `{}`",
-          "default": "{}"
+          "description": "Required. Settings object to apply to the transition. Can be `{}`"
         },
         "overlay": {
-          "type": "Boolean",
-          "description": "Optional: Whether to overlay over the current settings or replace them; blank/default omits field; OBS default: true",
-          "default": true
+          "type": "String",
+          "description": "Optional (blank uses OBS default). Whether to overlay over the current settings or replace them"
         }
       }
     },
@@ -4074,7 +4054,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -4094,7 +4074,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -4106,7 +4086,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"position\", \"Number\", {\"optional\": false}], [\"release\", \"Boolean\", {\"optional\": true, \"omitIfDefault\": true}]]}"
+          "default": "{\"fieldList\": [[\"position\", \"Number\", false], [\"release\", \"Boolean\", true]]}"
         },
         "request": {
           "type": "String",
@@ -4114,17 +4094,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "position": {
           "type": "Float",
-          "description": "Required: New position; restrictions: >= 0.0, <= 1.0"
+          "description": "Required. New position"
         },
         "release": {
-          "type": "Boolean",
-          "description": "Optional: Whether to release the TBar. Only set `false` if you know that you will be sending another position update; blank/default omits field; OBS default: `true`",
-          "default": true
+          "type": "String",
+          "description": "Optional (blank uses OBS default). Whether to release the TBar. Only set `false` if you know that you will be sending another position update"
         }
       }
     },
@@ -4143,7 +4122,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -4155,7 +4134,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"studioModeEnabled\", \"Boolean\", {\"optional\": false}]]}"
+          "default": "{\"fieldList\": [[\"studioModeEnabled\", \"Boolean\", false]]}"
         },
         "request": {
           "type": "String",
@@ -4163,12 +4142,12 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "studioModeEnabled": {
           "type": "Boolean",
-          "description": "Required: True == Enabled, False == Disabled"
+          "description": "Required. True == Enabled, False == Disabled"
         }
       }
     },
@@ -4179,7 +4158,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -4187,16 +4166,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to open the dialog of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to open the dialog of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to open the dialog of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to open the dialog of"
         }
       }
     },
@@ -4207,7 +4186,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -4215,16 +4194,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to open the dialog of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to open the dialog of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to open the dialog of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to open the dialog of"
         }
       }
     },
@@ -4235,7 +4214,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"inputName\", \"String\", {\"optional\": true}], [\"inputUuid\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"inputName\", \"String\", true], [\"inputUuid\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -4243,16 +4222,16 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "inputName": {
           "type": "String",
-          "description": "Optional: Name of the input to open the dialog of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the input to open the dialog of"
         },
         "inputUuid": {
           "type": "String",
-          "description": "Optional: UUID of the input to open the dialog of; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the input to open the dialog of"
         }
       }
     },
@@ -4271,7 +4250,7 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         }
       }
@@ -4283,7 +4262,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"videoMixType\", \"String\", {\"optional\": false}], [\"monitorIndex\", \"Number\", {\"optional\": true}], [\"projectorGeometry\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"videoMixType\", \"String\", false], [\"monitorIndex\", \"Number\", true], [\"projectorGeometry\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -4291,21 +4270,20 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "videoMixType": {
           "type": "String",
-          "description": "Required: Type of mix to open"
+          "description": "Required. Type of mix to open"
         },
         "monitorIndex": {
           "type": "String",
-          "description": "Optional: Monitor index, use `GetMonitorList` to obtain index; blank/default omits field; OBS default: -1: Opens projector in windowed mode",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Monitor index, use `GetMonitorList` to obtain index"
         },
         "projectorGeometry": {
           "type": "String",
-          "description": "Optional: Size/Position data for a windowed projector, in Qt Base64 encoded format. Mutually exclusive with `monitorIndex`; blank/default omits field; OBS default: N/A"
+          "description": "Optional (blank uses OBS default). Size/Position data for a windowed projector, in Qt Base64 encoded format. Mutually exclusive with `monitorIndex`"
         }
       }
     },
@@ -4316,7 +4294,7 @@
         "data": {
           "type": "String",
           "enabled": false,
-          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", {\"optional\": true}], [\"sourceName\", \"String\", {\"optional\": true}], [\"sourceUuid\", \"String\", {\"optional\": true}], [\"monitorIndex\", \"Number\", {\"optional\": true}], [\"projectorGeometry\", \"String\", {\"optional\": true}]]}"
+          "default": "{\"fieldList\": [[\"canvasUuid\", \"String\", true], [\"sourceName\", \"String\", true], [\"sourceUuid\", \"String\", true], [\"monitorIndex\", \"Number\", true], [\"projectorGeometry\", \"String\", true]]}"
         },
         "request": {
           "type": "String",
@@ -4324,29 +4302,28 @@
           "enabled": false
         },
         "requestId": {
-          "type": "String",
+          "type": "Integer",
           "default": "0"
         },
         "canvasUuid": {
           "type": "String",
-          "description": "Optional: UUID of the canvas the source is in, if using the sourceName field; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the canvas the source is in, if using the sourceName field"
         },
         "sourceName": {
           "type": "String",
-          "description": "Optional: Name of the source to open a projector for; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). Name of the source to open a projector for"
         },
         "sourceUuid": {
           "type": "String",
-          "description": "Optional: UUID of the source to open a projector for; blank/default omits field; OBS default: Unknown"
+          "description": "Optional (blank uses OBS default). UUID of the source to open a projector for"
         },
         "monitorIndex": {
           "type": "String",
-          "description": "Optional: Monitor index, use `GetMonitorList` to obtain index; blank/default omits field; OBS default: -1: Opens projector in windowed mode",
-          "default": ""
+          "description": "Optional (blank uses OBS default). Monitor index, use `GetMonitorList` to obtain index"
         },
         "projectorGeometry": {
           "type": "String",
-          "description": "Optional: Size/Position data for a windowed projector, in Qt Base64 encoded format. Mutually exclusive with `monitorIndex`; blank/default omits field; OBS default: N/A"
+          "description": "Optional (blank uses OBS default). Size/Position data for a windowed projector, in Qt Base64 encoded format. Mutually exclusive with `monitorIndex`"
         }
       }
     }

@@ -1,68 +1,20 @@
 # OBS Chataigne Advanced 2026
 
-Een protocol-gegenereerde Chataigne-module voor OBS WebSocket 5.x. Deze editie is in 2026 met AI-assistentie herschreven, handmatig nagelopen en live gevalideerd tegen Chataigne 1.10.4 en OBS 33.0.0 / obs-websocket 5.7.6.
-
-Versie 2026.11.3 voorkomt bovendien een opstartrace waarbij Chataigne de socket al kon openen voordat het modulescript geladen was. De groene verbindingsindicator was dan zichtbaar, maar OBS' eenmalige Hello-frame werd gemist en er volgde geen Identify. Op de eerste update-tick nadat het script geladen is, bouwt de module uitsluitend de WebSocket-client opnieuw op via de bestaande `Server Path`. Het modulescript blijft daarbij actief; `local.enabled` wordt bewust niet meer geschakeld.
-
-De module is afgeleid van [KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced](https://github.com/KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced), dat zelf voortbouwt op [Edrig/OBS-Websocket-Chataigne-Module](https://github.com/Edrig/OBS-Websocket-Chataigne-Module). Dank aan beide auteurs en aan Benjamin Kuperberg voor [Chataigne](https://benjamin.kuperberg.fr/chataigne/en).
-
-> AI-vermelding: de herimplementatie, protocol-audit, tests en documentatie van deze 2026-editie zijn door OpenAI Codex uitgevoerd onder regie van de gebruiker. De originele auteurs blijven hierboven expliciet vermeld; deze editie claimt hun eerdere werk niet als nieuw werk.
-
-## Belangrijkste correcties
-
-- Optionele velden worden werkelijk weggelaten. Een leeg `sourceUuid` of `projectorGeometry` komt dus niet meer in een `OpenSourceProjector`-request terecht.
-- Optionele numerieke velden zijn in Chataigne tekstvelden: leeg betekent “niet meesturen”, `0` en `-1` blijven geldige expliciete waarden.
-- Conditioneel vereiste naam/UUID-paren worden vóór verzending gecontroleerd.
-- Onderling exclusieve velden, waaronder `monitorIndex`/`projectorGeometry` en `inputVolumeMul`/`inputVolumeDb`, worden correct behandeld.
-- `requestId` wordt altijd als string verstuurd, conform het protocol.
-- `GetMonitorList` en alle andere `Array<Object>`-responses gebruiken nu de juiste `requests.*`-mapping; iedere row bewaart bovendien de volledige `rawJson`, zodat onbekende toekomstige velden zichtbaar blijven.
-- `Object`-responsevelden worden als JSON bewaard in plaats van genegeerd.
-- Mislukte requests zonder `responseData` worden zichtbaar gemaakt zonder scriptfout.
-- Alle huidige 147 requests en 60 events uit de officiële protocoldefinitie zijn ingebed. OBS WebSocket 5.7 canvas- en deinterlace-integraties zijn toegevoegd.
-- Alle JSON-opcodes 0, 1, 2, 3, 5, 6, 7, 8 en 9 worden ondersteund, inclusief Reidentify en request batches.
-
-Zie [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) voor de volledige wijzigingentabel en motivatie. De vooraf uitgevoerde forkaudit staat in [docs/FORK_AUDIT.md](docs/FORK_AUDIT.md). De oorspronkelijke gebruikersprompt staat ongewijzigd in [docs/USER_PROMPT.md](docs/USER_PROMPT.md).
+Chataigne-module voor OBS WebSocket 5.x. OpenAI Codex heeft de WebSocket-integratie met AI herschreven, rechtstreeks vanaf commit `d30e873` van de originele [Chataigne-Module-OBS-Websocket-Advanced](https://github.com/KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced) van KopiasCsaba. Die module bouwt voort op de [OBS WebSocket-module van Edrig](https://github.com/Edrig/OBS-Websocket-Chataigne-Module).
 
 ## Installatie
 
-1. Kopieer deze map als gewone lokale map naar `<Documents>/Chataigne/modules/OBS-Chataigne-Advanced-2026`.
-2. Kies in Chataigne `File > Reload Custom Modules`.
-3. Verwijder een oude module-instance en voeg `Software > OBS Chataigne Advanced 2026` opnieuw toe. Chataigne past wijzigingen in `module.json` niet retroactief toe op bestaande instances.
-4. Stel `Server Path` in, standaard `127.0.0.1:4455`, en vul zo nodig het OBS WebSocket-wachtwoord in.
+1. Pak de module uit in een lokale map onder `Documents/Chataigne/modules`. De map bevat rechtstreeks `module.json`, `OBSAdvanced.js` en `icon.png`.
+2. Kies `File → Reload Custom Modules` en voeg onder `Software` **OBS Chataigne Advanced 2026** toe. Maak de betreffende acties opnieuw aan als je overstapt van een oudere versie, zodat ze de actuele parametertypen krijgen.
+3. Stel `Server Path` in op de OBS-host en poort, standaard `127.0.0.1:4455`. Vul bij een OBS-server met authenticatie het WebSocket-wachtwoord in. De module vraagt bij het verbinden automatisch de initiële waarden op.
 
-Gebruik voor een Nextcloud-werkmap geen symlink in Chataignes modulemap; kopieer de map lokaal. De Chataigne-modulelader kan bij het volgen van zo'n cloudsymlink blokkeren.
+## Acties
 
-## Gebruik
+- **OpenSourceProjector** opent een bron met `sourceName` of `sourceUuid`. Vul `monitorIndex` in voor fullscreen of laat het leeg voor een venster. `-1` opent ook een venster. Gebruik alleen `projectorGeometry` als je Qt-geometrie wilt opgeven.
+- **GetMonitorList** toont de OBS-index en de monitorgegevens per monitor onder `Values → Responses → GetMonitorList`.
+- **SetSourceVisibility** staat onder `Scene Items`. Kies de actuele programmascène, alle scènes, een gevonden OBS-scène of voer de exacte naam in. De gevonden keuzes worden geladen bij het aanmaken van de actie. Maak na wijzigingen in de OBS-scènelijst een nieuwe actie aan om een bijgewerkte keuzelijst te krijgen. Voer de exacte bronnaam in of vink **All Sources** aan. Kies **Show**, **Hide** of **Toggle**. De actie werkt op directe scène-items en behandelt iedere kopie van een bron afzonderlijk. Voor items binnen groepen zijn de aparte OBS-groepsrequests beschikbaar.
+- Optionele getallen en booleans zijn tekstvelden. Leeg laat OBS de standaard kiezen. `0`, `-1`, `true` en `false` kunnen expliciet worden opgegeven.
 
-Responses staan onder `Values > Responses`, events onder `Values > Events` en samengevoegde veelgebruikte waarden onder `Values > Merged`.
+Zie de [wijzigingen en testresultaten](docs/IMPLEMENTATION_AUDIT.md) en de [gebruikersprompt](docs/USER_PROMPT.md).
 
-`GetMonitorList` publiceert naast de volledige monitorobjecten:
-
-- `monitorCount`;
-- een links-naar-rechts gesorteerde reeks OBS-monitorindexen onder `Merged > Monitoren`;
-- bij exact drie monitoren de extra aliassen `Links`, `Midden` en `Rechts`.
-
-Voor optionele numerieke commandovelden geldt: laat het veld leeg om het niet te verzenden. Vul bijvoorbeeld `-1` in bij `monitorIndex` om een projector in een venster te openen. Objectvelden verwachten JSON, bijvoorbeeld `{}`.
-
-## Testen en regenereren
-
-```sh
-npm test
-python3 tools/regenerate.py
-```
-
-De generator haalt `docs/generated/protocol.json` van de officiële [obs-websocket-repository](https://github.com/obsproject/obs-websocket) op, werkt de ingebedde API en de commandodefinities bij en bewaart optionaliteitsmetadata voor bestaande Chataigne-actions.
-
-De live validatie op 5 november 2026 gaf OBS-statuscode `100` voor `GetMonitorList`, `GetCanvasList` en een door deze module geserialiseerde `OpenSourceProjector` met uitsluitend `sourceName` en `monitorIndex`.
-
-Bij diagnose kunnen `Log Incoming` en `Log Outgoing` bovenin de module-inspector tijdelijk worden ingeschakeld. Een gezonde start toont achtereenvolgens Hello, Identify, Identified en de automatisch verzonden Get-requests. De Connection-waarde `identified` wordt tijdens een scriptreload eerst expliciet `0` en pas na OBS' Identified-frame weer `1`, zodat een enkel geopende socket niet langer op een volledige protocolsessie lijkt.
-
-## Compatibiliteit
-
-- Chataigne: getest met 1.10.4.
-- OBS: getest met 33.0.0 en obs-websocket 5.7.6.
-- Oudere OBS 28+ versies ondersteunen de basis van WebSocket 5.x, maar commands die later zijn toegevoegd kunnen daar terecht met `UnknownRequestType` worden afgewezen.
-
-## Licentie en herkomst
-
-Deze repository behoudt de herkomstgeschiedenis van de Advanced-module. Controleer bij distributie ook de licentievoorwaarden van Chataigne en obs-websocket; de protocoldefinitie wordt als gegenereerde interoperabiliteitsmetadata gebruikt.
+De gegenereerde OBS-definities zijn reproduceerbaar met `python3 tools/regenerate.py`. De module gebruikt de [Chataigne-modulestructuur](https://benkuper.notion.site/Making-your-own-Module-f892f4150bc74dc1b851ba1a3c99510d) met `module.json` en een WebSocket Client-script.

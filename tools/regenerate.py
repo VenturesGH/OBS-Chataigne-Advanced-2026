@@ -12,7 +12,7 @@ from urllib.request import urlopen
 
 # Define file paths
 script_directory = str(Path(__file__).resolve().parent)
-protocol_url = "https://raw.githubusercontent.com/obsproject/obs-websocket/master/docs/generated/protocol.json"
+protocol_url = "https://raw.githubusercontent.com/obsproject/obs-websocket/e28f84975984340e84fc4879cfc05741cc0afde1/docs/generated/protocol.json"
 obsng_js_path = script_directory+"/../OBSAdvanced.js"
 module_json_path = script_directory+"/../module.json"
 
@@ -34,31 +34,7 @@ api_data = json.dumps(protocol_data, indent=2)
 new_generated_code = f"{start_marker}\nvar API = {api_data};\n{end_marker}"
 obsng_content = re.sub(
     f"{start_marker}.*?{end_marker}",
-    lambda _: new_generated_code,
-    obsng_content,
-    flags=re.DOTALL
-)
-
-# Keep a compact optional-field lookup for commands created with an older
-# module.json. Newly created commands carry this metadata in their hidden data
-# parameter, but Chataigne persists old action definitions in .noisette files.
-optional_fields = {
-    request["requestType"]: [
-        field["valueName"] for field in request["requestFields"]
-        if field["valueOptional"]
-    ]
-    for request in protocol_data["requests"]
-    if any(field["valueOptional"] for field in request["requestFields"])
-}
-optional_start = "// <GENERATED-CODE-OPTIONAL-FIELDS>"
-optional_end = "// </GENERATED-CODE-OPTIONAL-FIELDS>"
-optional_code = (
-    f"{optional_start}\nvar optionalRequestFields = "
-    f"{json.dumps(optional_fields, indent=4)};\n{optional_end}"
-)
-obsng_content = re.sub(
-    f"{optional_start}.*?{optional_end}",
-    lambda _: optional_code,
+    lambda match: new_generated_code,
     obsng_content,
     flags=re.DOTALL
 )
@@ -81,21 +57,16 @@ def is_an_int_field(field_name):
     )
 
 # Maps protocol types to Chataigne types.
-def determine_type(paramName, paramType, optional=False):
+def determine_type(paramName, paramType):
     if paramType == "Boolean":
         return "Boolean"
-    elif paramType == "Number" and optional:
-        # An empty String is the only reliable "not provided" representation
-        # for an optional number in a Chataigne command. 0 is often a valid
-        # value and therefore cannot be used as a sentinel.
-        return "String"
     elif paramType == "Number":
         return is_an_int_field(paramName) and "Integer" or "Float"
     elif paramType == "String":
         return "String"
     elif paramType == "Object":
         return "String"
-    elif paramType == "Any":
+    elif paramType == "Any" or paramType.startswith("Array<"):
         return "String"
     else:
         return ""
@@ -106,14 +77,16 @@ with open(module_json_path, "r") as module_file:
     module_data = json.load(module_file)
 
 # === Pre-fill with fixed triggers
+visibility_command = module_data["commands"]["SetSourceVisibility"]
 module_data["commands"] = {
+    "SetSourceVisibility": visibility_command,
     "Raw WS Message": {
         "menu": "",
         "callback": "sendRawWSMessage",
         "parameters": {
             "data": {
                 "type": "String",
-                "default": json.dumps({"op":6,"d":{"requestType":"GetStats","requestId":0,"requestData": {"foo":"bar"}}})
+                "default": json.dumps({"op":6,"d":{"requestType":"GetStats","requestId":"0"}})
             }
         }
     },
@@ -126,40 +99,15 @@ module_data["commands"] = {
                 "default": "GetStats"
             },
             "requestId": {
-                "type": "String",
+                "type": "Integer",
                 "default": "0"
             },
             "requestData": {
                 "type": "String",
-                "default": json.dumps({"foo":"bar"})
+                "default": json.dumps({})
             }
         }
     },
-    "Request Batch": {
-        "menu": "",
-        "callback": "sendRequestBatch",
-        "parameters": {
-            "requestId": {
-                "type": "String",
-                "default": "batch-0",
-                "description": "String used to correlate the batch response"
-            },
-            "haltOnFailure": {
-                "type": "Boolean",
-                "default": False
-            },
-            "executionType": {
-                "type": "Integer",
-                "default": 0,
-                "description": "0 SerialRealtime, 1 SerialFrame, 2 Parallel"
-            },
-            "requests": {
-                "type": "String",
-                "default": json.dumps([{"requestType": "GetVersion"}]),
-                "description": "JSON array of OBS request objects"
-            }
-        }
-    }
 
 }
 
@@ -173,7 +121,7 @@ for request in protocol_data["requests"]:
         params = {
             "data":{"type":"String","enabled":False},
             "request":{"type":"String","default":request_type,"enabled":False},
-            "requestId":{"type":"String","default":"0"},
+            "requestId":{"type":"Integer","default":"0"},
         }
         fieldList = []
 
@@ -182,40 +130,17 @@ for request in protocol_data["requests"]:
                 # This is because of the weird way the keyboard object is expressed in the official protocol.
                 continue
 
-            typeName = determine_type(
-                field["valueName"], field["valueType"], field["valueOptional"]
-            )
+            typeName = determine_type(field["valueName"],field["valueType"])
             if typeName == "":
                 continue
-            field_metadata = {"optional": field['valueOptional']}
-
-            # Optional booleans use the protocol's default. Omitting that
-            # value is semantically identical, while toggling it still lets a
-            # user send the non-default value explicitly.
-            if field['valueOptional'] and field['valueType'] == "Boolean":
-                behavior = (field.get('valueOptionalBehavior') or '').strip('`').lower()
-                boolean_default = behavior == "true"
-                field_metadata["omitIfDefault"] = boolean_default
-
-            fieldList.append([field['valueName'], field['valueType'], field_metadata])
-
-            requirement = "Optional" if field['valueOptional'] else "Required"
-            description = f"{requirement}: {field['valueDescription']}"
-            if field.get('valueRestrictions'):
-                description += f"; restrictions: {field['valueRestrictions']}"
-            if field['valueOptional']:
-                description += f"; blank/default omits field; OBS default: {field.get('valueOptionalBehavior')}"
+            optional = field["valueOptional"]
+            fieldList.append([field["valueName"], field["valueType"], optional])
+            if optional and field["valueType"] in ("Number", "Boolean"):
+                typeName = "String"
             paramDef = {
                 "type": typeName,
-                "description": description
+                "description": ("Optional (blank uses OBS default). " if optional else "Required. ") + field["valueDescription"]
             }
-
-            if field['valueType'] == "Object" and not field['valueOptional']:
-                paramDef["default"] = "{}"
-            elif field['valueOptional'] and field['valueType'] == "Number":
-                paramDef["default"] = ""
-            elif field['valueOptional'] and field['valueType'] == "Boolean":
-                paramDef["default"] = field_metadata["omitIfDefault"]
             params[field['valueName']] = paramDef
 
 
@@ -230,6 +155,7 @@ for request in protocol_data["requests"]:
 # === Save the updated module.json
 with open(module_json_path, "w") as module_file:
     json.dump(module_data, module_file, indent=2)
+    module_file.write("\n")
 
 print("Files updated successfully.")
 

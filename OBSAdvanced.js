@@ -16,17 +16,6 @@
 //
 
 var unspecifiedArrayMapping = {
-    "requests.GetCanvasList.canvases": {
-        "title": function (index, row) {
-            return "Canvas: " + (row['canvasName'] || row['canvasUuid'] || index);
-        },
-        "columns": [
-            ["canvasName", "String"],
-            ["canvasUuid", "String"],
-            ["canvasFlags", "Object"],
-            ["canvasVideoSettings", "Object"]
-        ]
-    },
     "requests.GetSceneList.scenes": {
         "title": function (index, row) {
             return "Scene: " + row['sceneUuid'];
@@ -86,20 +75,9 @@ var unspecifiedArrayMapping = {
         },
         "columns": [
             ["inputKind", "String"],
-            ["inputKindCaps", "Number"],
             ["inputName", "String"],
             ["inputUuid", "String"],
             ["unversionedInputKind", "String"]
-        ]
-    },
-    "requests.GetInputPropertiesListPropertyItems.propertyItems": {
-        "title": function (index, row) {
-            return "Property item: " + (row['itemName'] || index);
-        },
-        "columns": [
-            ["itemName", "String"],
-            ["itemEnabled", "Boolean"],
-            ["itemValue", "Any"]
         ]
     },
     "requests.GetSourceFilterList.filters": {
@@ -137,24 +115,6 @@ var unspecifiedArrayMapping = {
             ["transitionKind", "String"],
             ["transitionName", "String"],
             ["transitionUuid", "String"]
-        ]
-    },
-    "requests.GetGroupSceneItemList.sceneItems": {
-        "title": function (index, row) {
-            return "Item: " + (row['sourceUuid'] || row['sceneItemId'] || index);
-        },
-        "columns": [
-            ["inputKind", "String"],
-            ["isGroup", "Boolean"],
-            ["sceneItemBlendMode", "String"],
-            ["sceneItemEnabled", "Boolean"],
-            ["sceneItemId", "Number"],
-            ["sceneItemIndex", "Number"],
-            ["sceneItemLocked", "Boolean"],
-            ["sourceName", "String"],
-            ["sourceType", "String"],
-            ["sourceUuid", "String"],
-            ["sceneItemTransform", ">>>requests.GetSceneItemList.sceneItems.sceneItemTransform"]
         ]
     },
     "requests.GetMonitorList.monitors": {
@@ -198,9 +158,11 @@ var unspecifiedArrayMapping = {
         "columns": [
             ["sceneName", "String"],
             ["sceneIndex", "Number"],
-            ["sceneUuid", "String"],
+            ["sceneUuid", "Number"],
         ]
     }
+    // "requests.GetInputPropertiesListPropertyItems.propertyItems": { // currently not possible to implement }
+    // "requests.GetGroupSceneItemList.sceneItems": { // Using groups is discouraged, not implemented. }
 };
 
 /**
@@ -293,107 +255,13 @@ var customEventHandlers = {"InputVolumeMeters": handleEventInputVolumeMeters};
 // =============== CUSTOM RESPONSE HANDLERS ===================
 // ============================================================
 
-function sortMonitorsLeftToRight(monitors) {
-    if (monitors == null) return [];
-
-    var sorted = [];
-    for (var monitorIndex = 0; monitorIndex < monitors.length; monitorIndex++) {
-        var monitor = monitors[monitorIndex];
-        if (monitor == null || monitor.monitorIndex === undefined ||
-            monitor.monitorPositionX === undefined) return [];
-        sorted.push({"index": monitor.monitorIndex, "x": monitor.monitorPositionX});
-    }
-
-    for (var leftIndex = 0; leftIndex < sorted.length - 1; leftIndex++) {
-        for (var rightIndex = leftIndex + 1; rightIndex < sorted.length; rightIndex++) {
-            var shouldSwap = sorted[rightIndex].x < sorted[leftIndex].x ||
-                (sorted[rightIndex].x == sorted[leftIndex].x &&
-                    sorted[rightIndex].index < sorted[leftIndex].index);
-            if (shouldSwap) {
-                var temporary = sorted[leftIndex];
-                sorted[leftIndex] = sorted[rightIndex];
-                sorted[rightIndex] = temporary;
-            }
-        }
-    }
-    return sorted;
-}
-
-function updateGetMonitorListSummary(monitors, responseContainer, mergedContainer) {
-    var monitorCount = monitors == null ? 0 : monitors.length;
-    valueIntParameter("monitorCount", monitorCount, responseContainer,
-        "Aantal monitoren dat OBS rapporteert");
-
-    var sorted = sortMonitorsLeftToRight(monitors);
-    if (sorted.length == 0) {
-        mergedContainer.removeContainer("Monitoren");
-        script.log("GetMonitorList: OBS rapporteert geen bruikbare monitorgegevens");
-        return;
-    }
-
-    var output = getContainer("Monitoren", mergedContainer);
-    output.clear();
-    var order = [];
-    for (var index = 0; index < sorted.length; index++) {
-        order.push(sorted[index].index);
-        valueIntParameter("Positie " + (index + 1), sorted[index].index, output,
-            "OBS monitorIndex, gesorteerd van links naar rechts");
-    }
-    valueStringParameter("Links naar rechts", joinValues(order, ";"), output,
-        "OBS monitorIndex-volgorde op basis van monitorPositionX");
-
-    if (sorted.length == 3) {
-        valueIntParameter("Links", sorted[0].index, output,
-            "OBS monitorIndex van het linker scherm");
-        valueIntParameter("Midden", sorted[1].index, output,
-            "OBS monitorIndex van het middelste scherm");
-        valueIntParameter("Rechts", sorted[2].index, output,
-            "OBS monitorIndex van het rechter scherm");
-    }
-}
-
 // Implementations must be before this line due to the JS engine's quirks.
 var customResponseHandlers = {};
-
-var isIdentified = false;
-var reconnectAfterInit = false;
-var subscriptionParameterNames = [
-    "general", "config", "scenes", "inputs", "transitions", "filters",
-    "outputs", "sceneItems", "mediaInputs", "vendors", "ui", "canvases",
-    "inputVolumeMeters", "inputActiveStateChanged", "inputShowStateChanged",
-    "sceneItemTransformChanged"
-];
 
 
 // ============================================================
 // =============== MODULE METHODS =============================
 // ============================================================
-
-/**
- * Chataigne may establish the WebSocket connection before this script has
- * finished loading. OBS sends Hello only once, immediately after connecting.
- * Changing Server Path rebuilds only the WebSocket client; unlike toggling
- * local.enabled, it leaves this script loaded and its callbacks registered.
- */
-function init() {
-    isIdentified = false;
-    updateConnectionValues("identified", false);
-    reconnectAfterInit = local.enabled.get();
-}
-
-/**
- * Wait until the script-loading transaction has completed before rebuilding
- * the client. Otherwise OBS can send Hello while init() is still running.
- */
-function update(deltaTime) {
-    if (!reconnectAfterInit) return;
-    reconnectAfterInit = false;
-    var serverPath = local.parameters.serverPath.get();
-    var separator = serverPath.charAt(serverPath.length - 1) == "/" ? "" : "/";
-    local.parameters.serverPath.set(serverPath + separator + "__chataigne_reconnect__");
-    local.parameters.serverPath.set(serverPath);
-    script.log("OBS WebSocket client restarted after script load");
-}
 
 /**
  * moduleMethod: Removes all custom containers from the values.
@@ -418,139 +286,78 @@ function moduleValueChanged(value) {
     }
 }
 
-function calculateEventSubscriptions() {
-    var subscriptions = 0;
-    var eventSub = local.parameters.eventSub;
-
-    if (eventSub.general.get()) subscriptions += (1 << 0);
-    if (eventSub.config.get()) subscriptions += (1 << 1);
-    if (eventSub.scenes.get()) subscriptions += (1 << 2);
-    if (eventSub.inputs.get()) subscriptions += (1 << 3);
-    if (eventSub.transitions.get()) subscriptions += (1 << 4);
-    if (eventSub.filters.get()) subscriptions += (1 << 5);
-    if (eventSub.outputs.get()) subscriptions += (1 << 6);
-    if (eventSub.sceneItems.get()) subscriptions += (1 << 7);
-    if (eventSub.mediaInputs.get()) subscriptions += (1 << 8);
-    if (eventSub.vendors.get()) subscriptions += (1 << 9);
-    if (eventSub.ui.get()) subscriptions += (1 << 10);
-    if (eventSub.canvases.get()) subscriptions += (1 << 11);
-    if (eventSub.inputVolumeMeters.get()) subscriptions += (1 << 16);
-    if (eventSub.inputActiveStateChanged.get()) subscriptions += (1 << 17);
-    if (eventSub.inputShowStateChanged.get()) subscriptions += (1 << 18);
-    if (eventSub.sceneItemTransformChanged.get()) subscriptions += (1 << 19);
-
-    return subscriptions;
-}
-
-function sendIdentify(helloData) {
-    var identifyData = {
-        "rpcVersion": helloData.rpcVersion < 1 ? helloData.rpcVersion : 1,
-        "eventSubscriptions": calculateEventSubscriptions()
-    };
-
-    if (helloData.authentication != null) {
-        if (!local.parameters.enableAuthentication.get()) {
-            script.log("OBS requires authentication, but Enable Authentication is disabled");
-        } else {
-            var passwordAndSalt = local.parameters.password.get() + helloData.authentication.salt;
-            var secret = util.toBase64(parseHex(util.encodeSHA256(passwordAndSalt)));
-            identifyData.authentication = util.toBase64(parseHex(util.encodeSHA256(
-                secret + helloData.authentication.challenge
-            )));
-        }
-    }
-
-    local.send(JSON.stringify({"op": 1, "d": identifyData}));
-    script.log("OBS Hello received; Identify sent");
-}
-
-function sendReidentify() {
-    if (!isIdentified) return;
-    local.send(JSON.stringify({
-        "op": 3,
-        "d": {"eventSubscriptions": calculateEventSubscriptions()}
-    }));
-}
-
-function moduleParameterChanged(parameter) {
-    if (subscriptionParameterNames.indexOf(parameter.name) != -1) sendReidentify();
-}
-
-function updateConnectionValues(name, value) {
-    var connection = getContainer("Connection");
-    addDynamicParameter(name, value, connection, "OBS WebSocket connection state");
-}
-
-function handleFailedRequest(data) {
-    var responseContainer = getContainer("Responses#" + data.requestType);
-    responseContainer.clear();
-    valueBoolParameter("success", false, responseContainer, "OBS request result");
-    valueIntParameter("statusCode", data.requestStatus.code, responseContainer,
-        "OBS RequestStatus code");
-    valueStringParameter("comment", data.requestStatus.comment || "", responseContainer,
-        "OBS error details");
-    valueStringParameter("requestId", "" + data.requestId, responseContainer,
-        "Request correlation id");
-    script.log("OBS request failed: " + data.requestType + " [" +
-        data.requestStatus.code + "] " + (data.requestStatus.comment || ""));
-}
-
-function handleBatchResponse(data) {
-    var batchContainer = getContainer("Responses#Batch#" + data.requestId);
-    batchContainer.clear();
-    var results = data.results || [];
-    valueIntParameter("resultCount", results.length, batchContainer, "Number of batch results");
-
-    for (var index = 0; index < results.length; index++) {
-        var result = results[index];
-        var resultContainer = getContainer("Result " + (index + 1), batchContainer);
-        addDynamicParameter("requestType", result.requestType, resultContainer, "");
-        addDynamicParameter("requestId", result.requestId, resultContainer, "");
-        addDynamicParameter("requestStatus", result.requestStatus, resultContainer, "");
-        if (result.responseData !== undefined) {
-            addDynamicParameter("responseData", result.responseData, resultContainer, "");
-        }
-    }
-}
-
 /**
  * moduleMethod: Every time an incoming message is received, we receive it in here.
  * @param message
  */
+var identified = false;
+var sceneChoices = [];
+
+function moduleParameterChanged(parameter) {
+    if (parameter.name == "connected" && !parameter.get()) {
+        identified = false;
+        sceneChoices = [];
+    }
+}
+
 function wsMessageReceived(message) {
-    // OBS guarantees valid JSON frames for the JSON subprotocol. Chataigne's
-    // script engine does not implement try/catch, so parsing must remain direct.
+    /* ************************* CONNECTION ******************************** */
     var obsObj = JSON.parse(message);
     var d = obsObj.d;
 
-    if (d == null) {
-        script.log("OBS WebSocket message has no data object: " + message);
+    if (obsObj.op == 0) {
+        identified = false;
+        sceneChoices = [];
+        var newEventSub = 0; // Start with EventSubscription::None
+
+        // Add event subscriptions based on parameters
+        if (local.parameters.eventSub.general.get()) newEventSub += (1 << 0); // EventSubscription::General
+        if (local.parameters.eventSub.config.get()) newEventSub += (1 << 1); // EventSubscription::Config
+        if (local.parameters.eventSub.scenes.get()) newEventSub += (1 << 2); // EventSubscription::Scenes
+        if (local.parameters.eventSub.inputs.get()) newEventSub += (1 << 3); // EventSubscription::Inputs
+        if (local.parameters.eventSub.transitions.get()) newEventSub += (1 << 4); // EventSubscription::Transitions
+        if (local.parameters.eventSub.filters.get()) newEventSub += (1 << 5); // EventSubscription::Filters
+        if (local.parameters.eventSub.outputs.get()) newEventSub += (1 << 6); // EventSubscription::Outputs
+        if (local.parameters.eventSub.sceneItems.get()) newEventSub += (1 << 7); // EventSubscription::SceneItems
+        if (local.parameters.eventSub.mediaInputs.get()) newEventSub += (1 << 8); // EventSubscription::MediaInputs
+        if (local.parameters.eventSub.vendors.get()) newEventSub += (1 << 9); // EventSubscription::Vendors
+        if (local.parameters.eventSub.ui.get()) newEventSub += (1 << 10); // EventSubscription::Ui
+        if (local.parameters.eventSub.inputVolumeMeters.get()) newEventSub += (1 << 16); // EventSubscription::InputVolumeMeters
+        if (local.parameters.eventSub.inputActiveStateChanged.get()) newEventSub += (1 << 17); // EventSubscription::InputActiveStateChanged
+        if (local.parameters.eventSub.inputShowStateChanged.get()) newEventSub += (1 << 18); // EventSubscription::InputShowStateChanged
+        if (local.parameters.eventSub.sceneItemTransformChanged.get()) newEventSub += (1 << 19); // EventSubscription::SceneItemTransformChanged
+
+        if (local.parameters.eventSub.canvases.get()) newEventSub += (1 << 11);
+
+        var identify = {"rpcVersion": 1, "eventSubscriptions": newEventSub};
+        if (d.authentication != null) {
+            if (!local.parameters.enableAuthentification.get()) {
+                script.log("OBS requires authentication. Enable it in this module.");
+                return;
+            }
+            var saltedPassword = local.parameters.password.get() + d.authentication.salt;
+            var secret = util.toBase64(parseHex(util.encodeSHA256(saltedPassword)));
+            identify.authentication = util.toBase64(parseHex(util.encodeSHA256(secret + d.authentication.challenge)));
+        }
+        local.send(JSON.stringify({"op": 1, "d": identify}));
         return;
     }
 
-    if (obsObj.op == 0) {
-        isIdentified = false;
-        updateConnectionValues("obsStudioVersion", d.obsStudioVersion);
-        updateConnectionValues("obsWebSocketVersion", d.obsWebSocketVersion);
-        updateConnectionValues("serverRpcVersion", d.rpcVersion);
-        sendIdentify(d);
-        return;
-    } else if (obsObj.op == 2) {
-        isIdentified = true;
-        script.log("OBS identified; requesting initial state");
-        updateConnectionValues("identified", true);
-        updateConnectionValues("negotiatedRpcVersion", d.negotiatedRpcVersion);
+    if (obsObj.op == 2) {
+        identified = true;
+        script.log("OBS WebSocket identified (RPC " + d.negotiatedRpcVersion + ")");
         removeAllValues();
-        updateConnectionValues("identified", true);
-        updateConnectionValues("negotiatedRpcVersion", d.negotiatedRpcVersion);
         queryAll();
         return;
-    } else if (obsObj.op == 9) {
-        handleBatchResponse(d);
-        return;
-    } else if (obsObj.op == 7 && d.requestStatus && !d.requestStatus.result) {
-        handleFailedRequest(d);
-        return;
+    }
+
+    if (obsObj.op == 7 && d.requestStatus.result) {
+        if (d.requestType == "GetSceneList") sceneChoices = d.responseData.scenes;
+        followVisibilityRequest(d);
+    }
+    if (obsObj.op == 5 && identified && (d.eventType == "SceneCreated" || d.eventType == "SceneRemoved" ||
+        d.eventType == "SceneNameChanged" || d.eventType == "CurrentSceneCollectionChanged")) {
+        sendObsCommand("GetSceneList", undefined, "refresh-scenes");
     }
 
     var apiSection = null;
@@ -568,8 +375,6 @@ function wsMessageReceived(message) {
         if (!handleCall(apiSection, name, d)) {
             script.log("Message wasn't handled: " + message);
         }
-    } else if (obsObj.op != 7 && obsObj.op != 5) {
-        script.log("Unsupported OBS WebSocket op code: " + obsObj.op);
     }
 
 
@@ -597,590 +402,6 @@ function sendRawOBSRequest(requestType, requestId, requestData) {
     sendObsCommand(requestType, JSON.parse(requestData), requestId);
 }
 
-function sendRequestBatch(requestId, haltOnFailure, executionType, requests) {
-    var parsedRequests = JSON.parse(requests);
-
-    if (parsedRequests == null || parsedRequests.length === undefined) {
-        script.log("Request Batch must contain a JSON array of request objects");
-        return;
-    }
-
-    local.send(JSON.stringify({
-        "op": 8,
-        "d": {
-            "requestId": "" + requestId,
-            "haltOnFailure": haltOnFailure,
-            "executionType": executionType,
-            "requests": parsedRequests
-        }
-    }));
-}
-
-// The generated fieldList only contains field names and types. Optionality is
-// available in the embedded OBS protocol definition, so use that as the source
-// of truth instead of guessing from Chataigne's default values.
-//
-// Chataigne keeps the hidden `data` parameter of existing actions and its
-// runtime cannot reliably walk the large embedded API object. This compact
-// protocol-derived index therefore also supports actions created before the
-// fieldList metadata was added by tools/regenerate.py.
-// <GENERATED-CODE-OPTIONAL-FIELDS>
-var optionalRequestFields = {
-    "SetVideoSettings": [
-        "fpsNumerator",
-        "fpsDenominator",
-        "baseWidth",
-        "baseHeight",
-        "outputWidth",
-        "outputHeight"
-    ],
-    "GetSourceFilterList": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid"
-    ],
-    "CreateSourceFilter": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid",
-        "filterSettings"
-    ],
-    "RemoveSourceFilter": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid"
-    ],
-    "SetSourceFilterName": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid"
-    ],
-    "GetSourceFilter": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid"
-    ],
-    "SetSourceFilterIndex": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid"
-    ],
-    "SetSourceFilterSettings": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid",
-        "overlay"
-    ],
-    "SetSourceFilterEnabled": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid"
-    ],
-    "CallVendorRequest": [
-        "requestData"
-    ],
-    "TriggerHotkeyByName": [
-        "contextName"
-    ],
-    "TriggerHotkeyByKeySequence": [
-        "keyId",
-        "keyModifiers",
-        "keyModifiers.shift",
-        "keyModifiers.control",
-        "keyModifiers.alt",
-        "keyModifiers.command"
-    ],
-    "Sleep": [
-        "sleepMillis",
-        "sleepFrames"
-    ],
-    "GetInputList": [
-        "inputKind"
-    ],
-    "GetInputKindList": [
-        "unversioned"
-    ],
-    "CreateInput": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid",
-        "inputSettings",
-        "sceneItemEnabled"
-    ],
-    "RemoveInput": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputName": [
-        "inputName",
-        "inputUuid"
-    ],
-    "GetInputSettings": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputSettings": [
-        "inputName",
-        "inputUuid",
-        "overlay"
-    ],
-    "GetInputMute": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputMute": [
-        "inputName",
-        "inputUuid"
-    ],
-    "ToggleInputMute": [
-        "inputName",
-        "inputUuid"
-    ],
-    "GetInputVolume": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputVolume": [
-        "inputName",
-        "inputUuid",
-        "inputVolumeMul",
-        "inputVolumeDb"
-    ],
-    "GetInputAudioBalance": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputAudioBalance": [
-        "inputName",
-        "inputUuid"
-    ],
-    "GetInputAudioSyncOffset": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputAudioSyncOffset": [
-        "inputName",
-        "inputUuid"
-    ],
-    "GetInputAudioMonitorType": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputAudioMonitorType": [
-        "inputName",
-        "inputUuid"
-    ],
-    "GetInputAudioTracks": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputAudioTracks": [
-        "inputName",
-        "inputUuid"
-    ],
-    "GetInputDeinterlaceMode": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputDeinterlaceMode": [
-        "inputName",
-        "inputUuid"
-    ],
-    "GetInputDeinterlaceFieldOrder": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetInputDeinterlaceFieldOrder": [
-        "inputName",
-        "inputUuid"
-    ],
-    "GetInputPropertiesListPropertyItems": [
-        "inputName",
-        "inputUuid"
-    ],
-    "PressInputPropertiesButton": [
-        "inputName",
-        "inputUuid"
-    ],
-    "GetMediaInputStatus": [
-        "inputName",
-        "inputUuid"
-    ],
-    "SetMediaInputCursor": [
-        "inputName",
-        "inputUuid"
-    ],
-    "OffsetMediaInputCursor": [
-        "inputName",
-        "inputUuid"
-    ],
-    "TriggerMediaInputAction": [
-        "inputName",
-        "inputUuid"
-    ],
-    "CreateRecordChapter": [
-        "chapterName"
-    ],
-    "GetSceneItemList": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "GetGroupSceneItemList": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "GetSceneItemId": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid",
-        "searchOffset"
-    ],
-    "GetSceneItemSource": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "CreateSceneItem": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid",
-        "sourceName",
-        "sourceUuid",
-        "sceneItemEnabled"
-    ],
-    "RemoveSceneItem": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "DuplicateSceneItem": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid",
-        "destinationSceneName",
-        "destinationSceneUuid"
-    ],
-    "GetSceneItemTransform": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "SetSceneItemTransform": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "GetSceneItemEnabled": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "SetSceneItemEnabled": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "GetSceneItemLocked": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "SetSceneItemLocked": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "GetSceneItemIndex": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "SetSceneItemIndex": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "GetSceneItemBlendMode": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "SetSceneItemBlendMode": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "GetSceneList": [
-        "canvasUuid"
-    ],
-    "SetCurrentProgramScene": [
-        "sceneName",
-        "sceneUuid"
-    ],
-    "SetCurrentPreviewScene": [
-        "sceneName",
-        "sceneUuid"
-    ],
-    "CreateScene": [
-        "canvasUuid"
-    ],
-    "RemoveScene": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "SetSceneName": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "GetSceneSceneTransitionOverride": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid"
-    ],
-    "SetSceneSceneTransitionOverride": [
-        "canvasUuid",
-        "sceneName",
-        "sceneUuid",
-        "transitionName",
-        "transitionDuration"
-    ],
-    "GetSourceActive": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid"
-    ],
-    "GetSourceScreenshot": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid",
-        "imageWidth",
-        "imageHeight",
-        "imageCompressionQuality"
-    ],
-    "SaveSourceScreenshot": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid",
-        "imageWidth",
-        "imageHeight",
-        "imageCompressionQuality"
-    ],
-    "SetCurrentSceneTransitionSettings": [
-        "overlay"
-    ],
-    "SetTBarPosition": [
-        "release"
-    ],
-    "OpenInputPropertiesDialog": [
-        "inputName",
-        "inputUuid"
-    ],
-    "OpenInputFiltersDialog": [
-        "inputName",
-        "inputUuid"
-    ],
-    "OpenInputInteractDialog": [
-        "inputName",
-        "inputUuid"
-    ],
-    "OpenVideoMixProjector": [
-        "monitorIndex",
-        "projectorGeometry"
-    ],
-    "OpenSourceProjector": [
-        "canvasUuid",
-        "sourceName",
-        "sourceUuid",
-        "monitorIndex",
-        "projectorGeometry"
-    ]
-};
-// </GENERATED-CODE-OPTIONAL-FIELDS>
-
-// Add entries here only when the OBS protocol explicitly permits an optional
-// string to be present with an empty value. No OBS WebSocket 5.x request fields
-// currently need such an override, but keeping this explicit avoids a blanket
-// "remove all empty strings" rule.
-var optionalEmptyStringFields = {};
-
-// OBS uses explicit null values for these optional fields to remove an existing
-// transition override. Other optional null values mean "not provided".
-var optionalNullFields = {
-    "SetSceneSceneTransitionOverride.transitionName": true,
-    "SetSceneSceneTransitionOverride.transitionDuration": true
-};
-
-// The OBS protocol describes these pairs as mutually exclusive in prose. A
-// Chataigne Integer parameter defaults to 0, so projectorGeometry must win when
-// it is filled in; otherwise both values would be sent unintentionally.
-var mutuallyExclusiveRequestFields = {
-    "OpenVideoMixProjector": [
-        {"fields": ["monitorIndex", "projectorGeometry"], "preferred": "projectorGeometry"}
-    ],
-    "OpenSourceProjector": [
-        {"fields": ["monitorIndex", "projectorGeometry"], "preferred": "projectorGeometry"}
-    ],
-    "SetInputVolume": [
-        {"fields": ["inputVolumeMul", "inputVolumeDb"], "rejectMultiple": true}
-    ]
-};
-
-function findRequestFieldDefinition(requestType, fieldName) {
-    if (typeof API === "undefined" || !API.requests) return null;
-
-    for (var requestIndex = 0; requestIndex < API.requests.length; requestIndex++) {
-        var request = API.requests[requestIndex];
-        if (request.requestType !== requestType) continue;
-
-        var fields = request.requestFields || [];
-        for (var fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
-            if (fields[fieldIndex].valueName === fieldName) return fields[fieldIndex];
-        }
-        return null;
-    }
-    return null;
-}
-
-function getRequestFieldMetadata(requestType, fieldListEntry) {
-    var fieldName = fieldListEntry[0];
-    var fieldType = fieldListEntry[1];
-    var fieldListMetadata = fieldListEntry.length > 2 && fieldListEntry[2] !== null &&
-        typeof fieldListEntry[2] === "object"
-        ? fieldListEntry[2]
-        : {};
-    var protocolField = findRequestFieldDefinition(requestType, fieldName);
-    var optional = fieldListMetadata.optional;
-
-    if (optional === undefined) {
-        var indexedOptionalFields = optionalRequestFields[requestType] || [];
-        optional = indexedOptionalFields.indexOf(fieldName) !== -1 ||
-            protocolField !== null && protocolField.valueOptional === true;
-    }
-
-    return {
-        "name": fieldName,
-        "type": fieldType,
-        "inputType": fieldListMetadata.inputType || fieldType,
-        "optional": optional === true,
-        "omitIfDefault": fieldListMetadata.omitIfDefault,
-        "allowEmptyString": fieldListMetadata.allowEmptyString === true ||
-            optionalEmptyStringFields[requestType + "." + fieldName] === true,
-        "allowNull": fieldListMetadata.allowNull === true ||
-            optionalNullFields[requestType + "." + fieldName] === true
-    };
-}
-
-function isStructuredRequestField(fieldType) {
-    return ["Object", "Array<String>", "Array<Object>"].indexOf(fieldType) !== -1;
-}
-
-function shouldOmitRequestField(metadata, value) {
-    if (!metadata.optional) return false;
-    if (value === undefined) return true;
-    if (value === null) return !metadata.allowNull;
-
-    if (value === "") {
-        if (metadata.type === "String") return !metadata.allowEmptyString;
-        return true;
-    }
-
-    if (metadata.omitIfDefault !== undefined && value === metadata.omitIfDefault) return true;
-
-    return false;
-}
-
-var invalidRequestValue = {};
-
-function parseRequestFieldValue(metadata, value) {
-    if (metadata.allowNull && value === "null") return null;
-    if (isStructuredRequestField(metadata.type) && typeof value === "string") {
-        return JSON.parse(value);
-    }
-    if (metadata.type === "Number" && typeof value === "string") {
-        if (value === "") return invalidRequestValue;
-        var numberValue = value * 1;
-        if (numberValue != numberValue) return invalidRequestValue;
-        return numberValue;
-    }
-    if (metadata.type === "Boolean" && typeof value === "string") {
-        if (value === "true") return true;
-        if (value === "false") return false;
-        return invalidRequestValue;
-    }
-    if (metadata.type === "Any" && typeof value === "string") {
-        return JSON.parse(value);
-    }
-    return value;
-}
-
-function applyMutuallyExclusiveRequestFields(requestType, requestData) {
-    var groups = mutuallyExclusiveRequestFields[requestType] || [];
-
-    for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) {
-        var group = groups[groupIndex];
-        var provided = [];
-        for (var providedIndex = 0; providedIndex < group.fields.length; providedIndex++) {
-            if (requestData[group.fields[providedIndex]] !== undefined) {
-                provided.push(group.fields[providedIndex]);
-            }
-        }
-        if (provided.length < 2) continue;
-
-        if (group.rejectMultiple) {
-            script.log(requestType + ": fields " + joinValues(provided, ", ") +
-                " are mutually exclusive; request not sent");
-            return false;
-        }
-        if (requestData[group.preferred] === undefined) continue;
-
-        for (var fieldIndex = 0; fieldIndex < group.fields.length; fieldIndex++) {
-            var fieldName = group.fields[fieldIndex];
-            if (fieldName !== group.preferred && requestData[fieldName] !== undefined) {
-                // Chataigne's JavaScript engine does not support the delete
-                // operator here. JSON.stringify omits undefined properties.
-                requestData[fieldName] = undefined;
-                script.log(requestType + ": omitted mutually exclusive field " + fieldName +
-                    " because " + group.preferred + " was provided");
-            }
-        }
-    }
-    return true;
-}
-
-function hasUsableRequestField(requestData, fieldName) {
-    return requestData[fieldName] !== undefined && requestData[fieldName] !== null &&
-        requestData[fieldName] !== "";
-}
-
-function validateRequestData(requestType, requestData, fieldList) {
-    var identifierGroups = [
-        ["inputName", "inputUuid"],
-        ["sceneName", "sceneUuid"],
-        ["sourceName", "sourceUuid"]
-    ];
-
-    for (var groupIndex = 0; groupIndex < identifierGroups.length; groupIndex++) {
-        var group = identifierGroups[groupIndex];
-        var requestHasGroup = false;
-        for (var fieldIndex = 0; fieldIndex < fieldList.length; fieldIndex++) {
-            if (fieldList[fieldIndex][0] === group[0]) requestHasGroup = true;
-        }
-        if (!requestHasGroup) continue;
-
-        if (!hasUsableRequestField(requestData, group[0]) &&
-            !hasUsableRequestField(requestData, group[1])) {
-            script.log(requestType + ": " + group[0] + " or " + group[1] +
-                " is required; request not sent");
-            return false;
-        }
-    }
-    return true;
-}
-
 /**
  * Module command method: Executes a template command in a generic way based on the generated module.json values.
  * @param data fieldList: [[fieldname,type], ... ]
@@ -1198,38 +419,135 @@ function validateRequestData(requestType, requestData, fieldList) {
  */
 function genericCommandExecutor(data, requestType, reqId, a, b, c, d, e, f, g, h, i) {
     var parameters = [a, b, c, d, e, f, g, h, i];
-    var commandData = JSON.parse(data);
-    // script.log(data, requestType, reqId, a, b, c, d, e, f, g, h, i);
+    var fields = JSON.parse(data).fieldList;
     var requestData = {};
 
-    for (var fieldIndex = 0; fieldIndex < commandData['fieldList'].length; fieldIndex++) {
-        var metadata = getRequestFieldMetadata(requestType, commandData['fieldList'][fieldIndex]);
-        var value = parameters[fieldIndex];
-
-        if (!metadata.optional && (value === undefined ||
-            value === "" && metadata.type !== "Any")) {
-            // Abort instead of serializing an invalid required field. Chataigne's
-            // JavaScript engine does not support `throw new Error(...)` here.
-            script.log(requestType + ": required field " + metadata.name + " is undefined; request not sent");
+    for (var index = 0; index < fields.length; index++) {
+        var name = fields[index][0];
+        var type = fields[index][1];
+        var value = parameters[index];
+        var optional = fields[index][2];
+        if (optional === undefined) optional = legacyFieldIsOptional(requestType, name);
+        if (value === undefined || value === null || value === "") {
+            if (optional) continue;
+            script.log(requestType + ": missing " + name);
             return;
         }
-        if (shouldOmitRequestField(metadata, value)) continue;
-        var parsedValue = parseRequestFieldValue(metadata, value);
-        if (parsedValue === invalidRequestValue) {
-            script.log(requestType + ": invalid value for " + metadata.name);
-            return;
+        if (value == "null" &&
+            ((requestType == "SetProfileParameter" && name == "parameterValue") ||
+             (requestType == "SetSceneSceneTransitionOverride" &&
+                (name == "transitionName" || name == "transitionDuration")))) {
+            value = null;
+        } else if (type == "Number" && typeof value == "string") {
+            value = JSON.parse(value);
+            if (typeof value != "number") {
+                script.log(requestType + ": expected a number for " + name);
+                return;
+            }
+        } else if (type == "Boolean" && typeof value == "string") {
+            if (value != "true" && value != "false") {
+                script.log(requestType + ": expected true or false for " + name);
+                return;
+            }
+            value = value == "true";
+        } else if (type == "Object" || type == "Any" || type.indexOf("Array<") == 0) {
+            value = JSON.parse(value);
         }
-        requestData[metadata.name] = parsedValue;
+        requestData[name] = value;
     }
 
-    if (!applyMutuallyExclusiveRequestFields(requestType, requestData)) return;
-
-    if (!validateRequestData(requestType, requestData, commandData['fieldList'])) return;
-
-    script.log("OBS command invoked: " + requestType);
+    if (requestType == "OpenSourceProjector" && !requestData.sourceName && !requestData.sourceUuid) {
+        script.log("OpenSourceProjector requires a source name or UUID");
+        return;
+    }
+    if ((requestType == "OpenSourceProjector" || requestType == "OpenVideoMixProjector") &&
+        requestData.projectorGeometry && requestData.monitorIndex !== undefined) {
+        script.log(requestType + ": choose monitorIndex or projectorGeometry");
+        return;
+    }
+    if (requestType == "SetInputVolume" && requestData.inputVolumeMul !== undefined &&
+        requestData.inputVolumeDb !== undefined) {
+        script.log("SetInputVolume: choose inputVolumeMul or inputVolumeDb");
+        return;
+    }
     sendObsCommand(requestType, requestData, reqId);
 }
 
+
+// Saved Chataigne actions from upstream carry only the field name and type.
+function legacyFieldIsOptional(requestType, name) {
+    for (var index = 0; index < API.requests.length; index++) {
+        var request = API.requests[index];
+        if (request.requestType != requestType) continue;
+        for (var fieldIndex = 0; fieldIndex < request.requestFields.length; fieldIndex++) {
+            var field = request.requestFields[fieldIndex];
+            if (field.valueName == name) return field.valueOptional;
+        }
+    }
+    return false;
+}
+
+function populateSceneChoices(command) {
+    var sceneParameter = command.getChild("Scene");
+    sceneParameter.setAttribute("saveValueOnly", false);
+    for (var index = 0; index < sceneChoices.length; index++) {
+        var name = sceneChoices[index].sceneName;
+        sceneParameter.addOption("OBS: " + name, "scene:" + name);
+    }
+}
+
+var visibilityPrefix = "source-visibility/";
+var visibilitySerial = 0;
+
+function setSourceVisibility(scene, manualScene, allSources, source, visibility) {
+    if (!identified || (!allSources && !source)) {
+        script.log("SetSourceVisibility requires a connected OBS and a source or All Sources");
+        return;
+    }
+    if (visibility != "show" && visibility != "hide" && visibility != "toggle") return;
+    var action = {"id": ++visibilitySerial, "all": allSources, "source": source, "mode": visibility};
+    if (scene == "current" || scene == "all") {
+        sendObsCommand(scene == "current" ? "GetCurrentProgramScene" : "GetSceneList",
+            undefined, visibilityPrefix + JSON.stringify(action));
+        return;
+    }
+    if (scene == "manual" && manualScene) {
+        requestVisibilityItems(action, manualScene);
+    } else if (scene && scene.indexOf("scene:") == 0) {
+        requestVisibilityItems(action, scene.substring(6));
+    } else {
+        script.log("SetSourceVisibility: choose a scene or enter its name");
+    }
+}
+
+function requestVisibilityItems(action, sceneName) {
+    action.sceneName = sceneName;
+    sendObsCommand("GetSceneItemList", {"sceneName": sceneName}, visibilityPrefix + JSON.stringify(action));
+}
+
+function followVisibilityRequest(reply) {
+    var id = "" + reply.requestId;
+    if (id.indexOf(visibilityPrefix) != 0) return;
+    var action = JSON.parse(id.substring(visibilityPrefix.length));
+    var data = reply.responseData;
+    if (reply.requestType == "GetCurrentProgramScene") {
+        requestVisibilityItems(action, data.sceneName || data.currentProgramSceneName);
+    } else if (reply.requestType == "GetSceneList") {
+        for (var index = 0; index < data.scenes.length; index++) {
+            requestVisibilityItems(action, data.scenes[index].sceneName);
+        }
+    } else if (reply.requestType == "GetSceneItemList") {
+        for (var index = 0; index < data.sceneItems.length; index++) {
+            var item = data.sceneItems[index];
+            if (!action.all && item.sourceName != action.source) continue;
+            sendObsCommand("SetSceneItemEnabled", {
+                "sceneName": action.sceneName,
+                "sceneItemId": item.sceneItemId,
+                "sceneItemEnabled": action.mode == "toggle" ? !item.sceneItemEnabled : action.mode == "show"
+            }, "visibility-" + action.id + "-" + action.sceneName + "-" + item.sceneItemId);
+        }
+    }
+}
 
 // ============================================================
 // =============== UTILITY  METHODS ===========================
@@ -1276,26 +594,24 @@ function handleCall(apiSection, name, d) {
     var eventContainer = getContainer(containerTitle + "#" + name);
     eventContainer.clear();
 
-    if (isRequest && d.requestStatus) {
-        valueBoolParameter("success", d.requestStatus.result, eventContainer, "OBS request result");
-        valueIntParameter("statusCode", d.requestStatus.code, eventContainer, "OBS RequestStatus code");
-        valueStringParameter("comment", d.requestStatus.comment || "", eventContainer,
-            "OBS response details");
-        valueStringParameter("requestId", "" + d.requestId, eventContainer,
-            "Request correlation id");
+    if (isRequest) {
+        valueIntParameter("statusCode", d.requestStatus.code, eventContainer, "OBS request status");
+        valueStringParameter("requestId", "" + d.requestId, eventContainer, "OBS request ID");
+        if (!d.requestStatus.result) {
+            valueStringParameter("comment", d.requestStatus.comment || "", eventContainer, "OBS error");
+            return true;
+        }
     }
-
     var fields = def[fieldKey];
-    var callData = d[valueKey] || {};
+    var payload = d[valueKey] || {};
 
     // Add parameters
     for (var i = 0; i < fields.length; i++) {
         var fieldDef = fields[i];
-        var fieldValue = callData[fieldDef.valueName];
+        var fieldValue = payload[fieldDef.valueName];
 
         if (fieldDef.valueType == "Array<Object>") {
-            renderArray(apiSection + "." + name + "." + fieldDef.valueName,
-                fieldValue, eventContainer);
+            renderArray(apiSection + "." + name + "." + fieldDef.valueName, fieldValue, eventContainer);
         } else {
             addParameter(fieldDef.valueName, fieldValue, fieldDef.valueType, eventContainer, fieldDef.valueDescription);
         }
@@ -1308,19 +624,13 @@ function handleCall(apiSection, name, d) {
                 var fieldLabel = labelParts[1];
                 var subContainer = getContainer(containerLabel, mergedContainer);
                 if (fieldDef.valueType == "Array<Object>") {
-                    subContainer.clear();
-                    renderArray(apiSection + "." + name + "." + fieldDef.valueName,
-                        fieldValue, subContainer);
+                    renderArray(apiSection + "." + name + "." + fieldDef.valueName, fieldValue, subContainer);
                 } else {
                     addParameter(fieldLabel, fieldValue, fieldDef.valueType, subContainer, fieldDef.valueDescription);
                 }
             }
         }
 
-    }
-
-    if (isRequest && name == "GetMonitorList") {
-        updateGetMonitorListSummary(callData.monitors, eventContainer, mergedContainer);
     }
 
     return true;
@@ -1371,19 +681,19 @@ function queryAll() {
 function renderArray(APISection, rows, container) {
     // script.log("Processing:" + JSON.stringify([APISection, rows]));
 
-    if (rows == null || rows.length === undefined) rows = [];
+    if (rows == null) return;
     var mapping = unspecifiedArrayMapping[APISection];
 
     // Iterate on all the "unknown" rows
     for (var r = 0; r < rows.length; r++) {
         var row = rows[r];
-        var rowTitle = mapping == undefined ? "Item " + (r + 1) : mapping.title(r, row);
-        var rowCont = getContainer(rowTitle, container);
+        var rowCont = getContainer(mapping ? mapping.title(r, row) : "Item " + (r + 1), container);
+        valueStringParameter("rawJson", JSON.stringify(row), rowCont, "Full OBS response item");
+        if (!mapping) continue;
 
-        var columns = mapping == undefined ? [] : mapping.columns;
-        for (var c = 0; c < columns.length; c++) {
-            var columnName = columns[c][0];
-            var columnType = columns[c][1];
+        for (var c = 0; c < mapping.columns.length; c++) {
+            var columnName = mapping.columns[c][0];
+            var columnType = mapping.columns[c][1];
 
             if (columnType.startsWith(">>>")) {
                 // If the type starts with >>> that's a redirect to render it based on a different specification.
@@ -1392,28 +702,6 @@ function renderArray(APISection, rows, container) {
                 addParameter(columnName, row[columnName], columnType, rowCont, "");
             }
         }
-
-        // The OBS protocol intentionally leaves Array<Object> row schemas
-        // unspecified. Preserve the complete object so fields added by newer
-        // OBS releases remain available even though Chataigne's script engine
-        // does not support JavaScript's `for...in` object enumeration.
-        valueStringParameter("rawJson", JSON.stringify(row), rowCont,
-            "Complete row, including fields unknown to this module version");
-    }
-}
-
-function addDynamicParameter(name, value, container, description) {
-    if (value === null || value === undefined) {
-        valueStringParameter(name, value === null ? "null" : "", container, description);
-    } else if (typeof value === "boolean") {
-        valueBoolParameter(name, value, container, description);
-    } else if (typeof value === "number") {
-        if (Math.floor(value) === value) valueIntParameter(name, value, container, description);
-        else valueFloatParameter(name, value, container, description);
-    } else if (typeof value === "string") {
-        valueStringParameter(name, value, container, description);
-    } else {
-        valueStringParameter(name, JSON.stringify(value), container, description);
     }
 }
 
@@ -1426,6 +714,7 @@ function addDynamicParameter(name, value, container, description) {
  * @param description
  */
 function addParameter(name, value, valueType, container, description) {
+    if (value === undefined || value === null) return;
     if (valueType == "Number") {
         if (isAnIntField(name)) {
             valueIntParameter(name, value, container, description);
@@ -1439,9 +728,9 @@ function addParameter(name, value, valueType, container, description) {
     } else if (valueType == "Array<String>") {
         var subContainer = getContainer(name + " list", container);
         subContainer.clear();
-        valueStringParameter(name, joinValues(value, ';'), container, description);
+        valueStringParameter(name, JSON.stringify(value), container, description);
         for (var i = 0; i < value.length; i++) {
-            valueStringParameter(i, value[i], subContainer, description);
+            valueStringParameter("" + i, value[i], subContainer, description);
         }
     } else if (valueType == "Any" || valueType == "Object" || valueType == "JSON") {
         valueStringParameter(name, JSON.stringify(value), container, description);
@@ -1463,15 +752,6 @@ function isAnIntField(fieldName) {
         || fieldName.endsWith("Frame")
         || fieldName.endsWith("Bytes")
         || fieldName.endsWith("Frames");
-}
-
-function joinValues(values, separator) {
-    var result = "";
-    for (var i = 0; i < values.length; i++) {
-        if (i > 0) result += separator;
-        result += values[i];
-    }
-    return result;
 }
 
 /**
@@ -1502,9 +782,11 @@ function valueBoolParameter(value, data, root, description) {
     if (description == undefined) {
         description = "";
     }
-    var parameter = root.addBoolParameter(value, description, data);
-    parameter.set(data);
-    parameter.setAttribute("readonly", true);
+    if (root.getChild(value) == null) {
+        root.addBoolParameter(value, description, data).setAttribute("readonly", true);
+    } else {
+        root.getChild(value).set(data);
+    }
 }
 
 /**
@@ -1521,9 +803,11 @@ function valueStringParameter(value, data, root, description) {
     if (description == undefined) {
         description = "";
     }
-    var parameter = root.addStringParameter(value, description, data);
-    parameter.set(data);
-    parameter.setAttribute("readonly", true);
+    if (root.getChild(value) == null) {
+        root.addStringParameter(value, description, data).setAttribute("readonly", true);
+    } else {
+        root.getChild(value).set(data);
+    }
 }
 
 /**
@@ -1540,9 +824,11 @@ function valueFloatParameter(value, data, root, description) {
     if (description == undefined) {
         description = "";
     }
-    var parameter = root.addFloatParameter(value, description, data);
-    parameter.set(data);
-    parameter.setAttribute("readonly", true);
+    if (root.getChild(value) == null) {
+        root.addFloatParameter(value, description, data).setAttribute("readonly", true);
+    } else {
+        root.getChild(value).set(data);
+    }
 }
 
 /**
@@ -1559,9 +845,11 @@ function valueIntParameter(value, data, root, description) {
     if (description == undefined) {
         description = "";
     }
-    var parameter = root.addIntParameter(value, description, data);
-    parameter.set(data);
-    parameter.setAttribute("readonly", true);
+    if (root.getChild(value) == null) {
+        root.addIntParameter(value, description, data).setAttribute("readonly", true);
+    } else {
+        root.getChild(value).set(data);
+    }
 }
 
 /**
