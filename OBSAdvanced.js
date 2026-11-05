@@ -292,11 +292,15 @@ function moduleValueChanged(value) {
  */
 var identified = false;
 var sceneChoices = [];
+var inputChoices = [];
+var groupChoices = [];
 
 function moduleParameterChanged(parameter) {
     if (parameter.name == "connected" && !parameter.get()) {
         identified = false;
         sceneChoices = [];
+        inputChoices = [];
+        groupChoices = [];
     }
 }
 
@@ -308,6 +312,8 @@ function wsMessageReceived(message) {
     if (obsObj.op == 0) {
         identified = false;
         sceneChoices = [];
+        inputChoices = [];
+        groupChoices = [];
         var newEventSub = 0; // Start with EventSubscription::None
 
         // Add event subscriptions based on parameters
@@ -352,12 +358,23 @@ function wsMessageReceived(message) {
     }
 
     if (obsObj.op == 7 && d.requestStatus.result) {
-        if (d.requestType == "GetSceneList") sceneChoices = d.responseData.scenes;
+        if (d.requestId == "visibility-scenes") sceneChoices = d.responseData.scenes;
+        if (d.requestId == "visibility-inputs") inputChoices = d.responseData.inputs;
+        if (d.requestId == "visibility-groups") groupChoices = d.responseData.groups;
         followVisibilityRequest(d);
     }
-    if (obsObj.op == 5 && identified && (d.eventType == "SceneCreated" || d.eventType == "SceneRemoved" ||
-        d.eventType == "SceneNameChanged" || d.eventType == "CurrentSceneCollectionChanged")) {
-        sendObsCommand("GetSceneList", undefined, "refresh-scenes");
+    if (obsObj.op == 5 && identified) {
+        var event = d.eventType;
+        if (event == "CurrentSceneCollectionChanged") {
+            refreshVisibilityChoices();
+        } else if (event == "SceneCreated" || event == "SceneRemoved" || event == "SceneNameChanged") {
+            sendObsCommand("GetSceneList", undefined, "visibility-scenes");
+        } else if (event == "InputCreated" || event == "InputRemoved" || event == "InputNameChanged") {
+            sendObsCommand("GetInputList", undefined, "visibility-inputs");
+            sendObsCommand("GetGroupList", undefined, "visibility-groups");
+        } else if (event == "SceneItemCreated" || event == "SceneItemRemoved") {
+            sendObsCommand("GetGroupList", undefined, "visibility-groups");
+        }
     }
 
     var apiSection = null;
@@ -487,19 +504,47 @@ function legacyFieldIsOptional(requestType, name) {
     return false;
 }
 
+function refreshVisibilityChoices() {
+    sendObsCommand("GetSceneList", undefined, "visibility-scenes");
+    sendObsCommand("GetInputList", undefined, "visibility-inputs");
+    sendObsCommand("GetGroupList", undefined, "visibility-groups");
+}
+
 function populateSceneChoices(command) {
     var sceneParameter = command.getChild("Scene");
+    var sourceParameter = command.getChild("Source");
     sceneParameter.setAttribute("saveValueOnly", false);
+    sourceParameter.setAttribute("saveValueOnly", false);
+    var sources = [];
     for (var index = 0; index < sceneChoices.length; index++) {
         var name = sceneChoices[index].sceneName;
         sceneParameter.addOption("OBS: " + name, "scene:" + name);
+        sources.push(name);
+    }
+    for (var index = 0; index < inputChoices.length; index++) {
+        var name = inputChoices[index].inputName;
+        if (sources.indexOf(name) == -1) sources.push(name);
+    }
+    for (var index = 0; index < groupChoices.length; index++) {
+        var name = groupChoices[index];
+        if (sources.indexOf(name) == -1) sources.push(name);
+    }
+    for (var index = 0; index < sources.length; index++) {
+        sourceParameter.addOption("OBS: " + sources[index], "source:" + sources[index]);
     }
 }
 
 var visibilityPrefix = "source-visibility/";
 var visibilitySerial = 0;
 
-function setSourceVisibility(scene, manualScene, allSources, source, visibility) {
+function setSourceVisibility(scene, manualScene, allSources, choice, source, visibility) {
+    // Existing actions may still pass the previous five-argument layout.
+    if (visibility === undefined) {
+        visibility = source;
+        source = choice;
+    } else if (choice && choice.indexOf("source:") == 0) {
+        source = choice.substring(7);
+    }
     if (!identified || (!allSources && !source)) {
         script.log("SetSourceVisibility requires a connected OBS and a source or All Sources");
         return;
@@ -660,11 +705,13 @@ function sendObsCommand(req, data, reqId) {
  * Executes all queryes from the API.
  */
 function queryAll() {
-    // Execute all the requests that start with Get and have no parameters.
+    // Scene/input lists have optional filters. Always request the unfiltered lists.
+    refreshVisibilityChoices();
+    // Execute all the remaining parameterless Get requests.
     for (var r = 0; r < API.requests.length; r++) {
         var request = API.requests[r];
         var requestType = request.requestType;
-        if (requestType.startsWith("Get") && request.requestFields.length == 0) {
+        if (requestType.startsWith("Get") && request.requestFields.length == 0 && requestType != "GetGroupList") {
             sendObsCommand(request.requestType, {}, r);
         }
     }

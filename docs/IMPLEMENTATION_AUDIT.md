@@ -22,3 +22,12 @@ De patch begint bij upstream `d30e873`. De generator gebruikt [protocol.json op 
 - **Modulescript tegen dezelfde draaiende OBS**. Hello → Identify → Identified zonder authenticatie. `GetMonitorList` gaf status 100 en leverde twee gerenderde monitorrijen. `OpenSourceProjector` gaf status 100 met alleen `sourceName` en `monitorIndex: -1`.
 - **Zichtbaarheid tegen dezelfde draaiende OBS**. Hide, Show en Toggle in de programmascène gaven status 100. `GetSceneItemEnabled` bevestigde respectievelijk `false`, `true` en `false`. De beginsituatie is hersteld. De Chataigne-keuzelijst en de bulkactie over alle scènes zijn niet live doorlopen.
 - **Afbakening**. Authenticatie met wachtwoord en alle overige afzonderlijke OBS-commando’s zijn in deze run niet live beproefd. De gewone moduleacties gebruiken JSON Hello, Identify, Identified, Event, Request en RequestResponse. Voor losse frames is er een Raw WS Message-actie.
+
+
+## Keuzelijsten in 2026.11.6
+
+| Integratiepunt | Wijziging | Motivatie |
+|---|---|---|
+| [GetSceneList](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#getscenelist), [GetInputList](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#getinputlist) en [GetGroupList](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#getgrouplist) | Vraag bij Identified de ongefilterde lijsten op. Vul bij het aanmaken van SetSourceVisibility de dropdowns Scene en Source. | GetSceneList en GetInputList hebben optionele filters. De oude opstartlus sloeg ze daarom over. Voor bronnen was er alleen een tekstveld. |
+
+Tegen de draaiende OBS getest dat alle drie lijstrequests na Identified slagen, dat de callbacks scène- en bronopties opbouwen en dat de waarden van die opties Hide, Show en Toggle correct uitvoeren. De zichtbaarheid is na de test hersteld. De keuzelijsten zijn via het modulescript getest.
