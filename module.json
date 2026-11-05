@@ -2,7 +2,7 @@
   "name": "OBS Chataigne Advanced 2026",
   "type": "WebSocket Client",
   "path": "Software",
-  "version": "2026.11.0",
+  "version": "2026.11.1",
   "description": "Protocol-generated OBS WebSocket 5.x module for Chataigne, rewritten with AI assistance and verified against OBS 33.",
   "url": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026",
   "downloadURL": "https://github.com/VenturesGH/OBS-Chataigne-Advanced-2026/archive/main.zip",

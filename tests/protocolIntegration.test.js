@@ -13,9 +13,13 @@ var logMessages = [];
 
 function MockParameter(value) {
     this.value = value;
+    this.setHistory = [];
 }
 MockParameter.prototype.get = function () { return this.value; };
-MockParameter.prototype.set = function (value) { this.value = value; };
+MockParameter.prototype.set = function (value) {
+    this.value = value;
+    this.setHistory.push(value);
+};
 MockParameter.prototype.setAttribute = function () {};
 
 function MockContainer(name) {
@@ -69,6 +73,7 @@ var context = {
     console: console,
     script: {log: function () { logMessages.push(Array.prototype.join.call(arguments, " ")); }},
     local: {
+        enabled: new MockParameter(true),
         values: valuesRoot,
         parameters: {
             eventSub: eventSubscriptions,
@@ -87,6 +92,14 @@ var context = {
 
 vm.createContext(context);
 vm.runInContext(moduleSource, context, {filename: "OBSAdvanced.js"});
+
+assert.ok(moduleSource.indexOf("function wsMessageReceived(message)") !== -1,
+    "WebSocket clients must use Chataigne's one-argument callback");
+
+// OBS sends Hello only once, immediately after the socket opens. Reconnecting
+// from init guarantees the message callback is installed before that frame.
+context.init();
+assert.deepStrictEqual(context.local.enabled.setHistory, [false, true]);
 
 // Every protocol request must be exposed as a generated Chataigne command.
 assert.strictEqual(context.API.requests.length, 147);

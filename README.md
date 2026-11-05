@@ -2,6 +2,8 @@
 
 Een protocol-gegenereerde Chataigne-module voor OBS WebSocket 5.x. Deze editie is in 2026 met AI-assistentie herschreven, handmatig nagelopen en live gevalideerd tegen Chataigne 1.10.4 en OBS 33.0.0 / obs-websocket 5.7.6.
 
+Versie 2026.11.1 voorkomt bovendien een opstartrace waarbij Chataigne de socket al kon openen voordat het modulescript geladen was. De groene verbindingsindicator was dan zichtbaar, maar OBS' eenmalige Hello-frame werd gemist en er volgde geen Identify. De module heropent de socket nu gecontroleerd vanuit `init()` nadat de callback beschikbaar is.
+
 De module is afgeleid van [KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced](https://github.com/KopiasCsaba/Chataigne-Module-OBS-Websocket-Advanced), dat zelf voortbouwt op [Edrig/OBS-Websocket-Chataigne-Module](https://github.com/Edrig/OBS-Websocket-Chataigne-Module). Dank aan beide auteurs en aan Benjamin Kuperberg voor [Chataigne](https://benjamin.kuperberg.fr/chataigne/en).
 
 > AI-vermelding: de herimplementatie, protocol-audit, tests en documentatie van deze 2026-editie zijn door OpenAI Codex uitgevoerd onder regie van de gebruiker. De originele auteurs blijven hierboven expliciet vermeld; deze editie claimt hun eerdere werk niet als nieuw werk.
@@ -52,6 +54,8 @@ python3 tools/regenerate.py
 De generator haalt `docs/generated/protocol.json` van de officiële [obs-websocket-repository](https://github.com/obsproject/obs-websocket) op, werkt de ingebedde API en de commandodefinities bij en bewaart optionaliteitsmetadata voor bestaande Chataigne-actions.
 
 De live validatie op 5 november 2026 gaf OBS-statuscode `100` voor `GetMonitorList`, `GetCanvasList` en een door deze module geserialiseerde `OpenSourceProjector` met uitsluitend `sourceName` en `monitorIndex`.
+
+Bij diagnose kunnen `Log Incoming` en `Log Outgoing` bovenin de module-inspector tijdelijk worden ingeschakeld. Een gezonde start toont achtereenvolgens Hello, Identify, Identified en de automatisch verzonden Get-requests.
 
 ## Compatibiliteit
 

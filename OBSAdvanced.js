@@ -369,6 +369,20 @@ var subscriptionParameterNames = [
 // ============================================================
 
 /**
+ * Chataigne may establish the WebSocket connection a few milliseconds before
+ * this script has finished loading. OBS sends Hello only once, immediately
+ * after connecting. Reconnect after init so the callback is guaranteed to be
+ * ready before that frame arrives. Respect a deliberately disabled module.
+ */
+function init() {
+    isIdentified = false;
+    if (local.enabled.get()) {
+        local.enabled.set(false);
+        local.enabled.set(true);
+    }
+}
+
+/**
  * moduleMethod: Removes all custom containers from the values.
  */
 function removeAllValues() {
@@ -434,6 +448,7 @@ function sendIdentify(helloData) {
     }
 
     local.send(JSON.stringify({"op": 1, "d": identifyData}));
+    script.log("OBS Hello received; Identify sent");
 }
 
 function sendReidentify() {
@@ -489,12 +504,7 @@ function handleBatchResponse(data) {
  * moduleMethod: Every time an incoming message is received, we receive it in here.
  * @param message
  */
-function wsMessageReceived(client, message) {
-    // Chataigne 1.9.x calls this callback with one argument; newer builds may
-    // also pass the client object first. Supporting both keeps the module
-    // compatible with the documented WebSocket callback signature.
-    if (message === undefined) message = client;
-
+function wsMessageReceived(message) {
     // OBS guarantees valid JSON frames for the JSON subprotocol. Chataigne's
     // script engine does not implement try/catch, so parsing must remain direct.
     var obsObj = JSON.parse(message);
@@ -514,6 +524,7 @@ function wsMessageReceived(client, message) {
         return;
     } else if (obsObj.op == 2) {
         isIdentified = true;
+        script.log("OBS identified; requesting initial state");
         updateConnectionValues("identified", true);
         updateConnectionValues("negotiatedRpcVersion", d.negotiatedRpcVersion);
         removeAllValues();

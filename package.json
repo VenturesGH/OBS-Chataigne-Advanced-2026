@@ -1,6 +1,6 @@
 {
   "name": "obs-chataigne-advanced-2026",
-  "version": "2026.11.0",
+  "version": "2026.11.1",
   "private": true,
   "description": "Tests for the OBS Chataigne Advanced 2026 module",
   "scripts": {
